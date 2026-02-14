@@ -1,24 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Alert, Button, Dropdown, DropdownButton } from 'react-bootstrap';
-import { FaGithub, FaPalette, FaSync, FaMoon, FaSun, FaCog, FaUser } from 'react-icons/fa';
+import { Container, Row, Col, Alert, Button } from 'react-bootstrap';
+import { FaGithub, FaUser } from 'react-icons/fa';
 import ActionsUsageCard from './components/ActionsUsageCard';
 import CopilotUsageCard from './components/CopilotUsageCard';
 import CostSummaryCard from './components/CostSummaryCard';
 import ProjectionCard from './components/ProjectionCard';
 import { LoadingSkeleton } from './components/SkeletonCard';
 import ProfileModal from './components/ProfileModal';
+import NavBar from './components/NavBar';
 import EffectsAccordionSection from './components/EffectsAccordionSection';
 import { LazyLoadWrapper, LazyLoadCardSkeleton } from './hooks/useLazyLoad';
 import { useSettingsState } from './hooks/useSettingsState';
 import { getUsageSummary, getPremiumRequestUsage, transformUsageSummary, transformPremiumRequestData } from './services/githubApi';
 import { accentThemes, initializeTheme, applyAccentColor, toggleMode, getSavedMode } from './services/themeService';
-import { loadProfiles, getActiveProfile, setActiveProfile, onProfilesChange, maskToken } from './services/profileService';
+import { loadProfiles, getActiveProfile, setActiveProfile, onProfilesChange } from './services/profileService';
 import { recordDailyUsage } from './services/historicalDataService';
-
-const ACCENT_THEMES = Object.keys(accentThemes).map(key => ({
-  id: key,
-  name: accentThemes[key].name
-}));
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -33,14 +29,12 @@ function App() {
 
   // Settings state using custom hook
   const {
-    chartType,
     glowEnabled,
     pulseEnabled,
     glowSpeed,
     pulseSpeed,
     glowExpanded,
     pulseExpanded,
-    handleChartTypeChange,
     handleGlowEnabledToggle,
     handlePulseEnabledToggle,
     handleGlowSpeedChange,
@@ -197,159 +191,37 @@ function App() {
     }
   };
 
-  // Format last updated time
-  const getLastUpdatedText = () => {
-    if (!lastUpdated) return '';
-    
-    const now = new Date();
-    const diffMs = now - lastUpdated;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return lastUpdated.toLocaleString();
-  };
-
   return (
     <div className="app-container">
+      <NavBar
+        loading={loading}
+        isDarkMode={isDarkMode}
+        activeProfile={activeProfile}
+        profiles={profiles}
+        selectedAccent={selectedAccent}
+        lastUpdated={lastUpdated}
+        glowEnabled={glowEnabled}
+        pulseEnabled={pulseEnabled}
+        glowSpeed={glowSpeed}
+        pulseSpeed={pulseSpeed}
+        glowExpanded={glowExpanded}
+        pulseExpanded={pulseExpanded}
+        onDarkModeToggle={handleDarkModeToggle}
+        onRefresh={handleRefresh}
+        onProfileChange={handleProfileChange}
+        onAccentChange={handleAccentChange}
+        onShowProfileModal={() => setShowProfileModal(true)}
+        onGlowEnabledToggle={handleGlowEnabledToggle}
+        onPulseEnabledToggle={handlePulseEnabledToggle}
+        onGlowSpeedChange={handleGlowSpeedChange}
+        onPulseSpeedChange={handlePulseSpeedChange}
+        onSetGlowExpanded={setGlowExpanded}
+        onSetPulseExpanded={setPulseExpanded}
+        accentThemes={accentThemes}
+        EffectsAccordionSection={EffectsAccordionSection}
+      />
+
       <Container fluid className="py-4">
-        <Row className="mb-4">
-          <Col>
-            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-              <div className="d-flex align-items-center gap-2 flex-wrap">
-                <div>
-                  <div className="d-flex align-items-center gap-2">
-                    <FaGithub size={32} style={{ color: 'var(--accent-primary)' }} />
-                    <h1 className="mb-0">GitHub Usage Dashboard</h1>
-                  </div>
-                  {lastUpdated && (
-                    <small className="text-muted" style={{ marginLeft: '2.5rem' }}>
-                      Last updated {getLastUpdatedText()} • Auto-refresh every hour
-                    </small>
-                  )}
-                </div>
-              </div>
-              
-               <div className="d-flex gap-2 align-items-center flex-wrap" style={{ width: '100%' }}>
-                  <Button 
-                    variant="outline-secondary" 
-                    onClick={handleRefresh}
-                    disabled={loading || !activeProfile?.username}
-                    title="Refresh data manually"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <FaSync className={loading ? 'spinning' : ''} />
-                  </Button>
-
-                  <Button
-                    variant="outline-secondary"
-                    onClick={handleDarkModeToggle}
-                    title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
-                    style={{ flexShrink: 0 }}
-                  >
-                    {isDarkMode ? <FaSun /> : <FaMoon />}
-                  </Button>
-
-                  {/* Profile Selector */}
-                  {profiles.length === 0 ? (
-                    <Button
-                      variant="outline-primary"
-                      onClick={() => setShowProfileModal(true)}
-                      style={{ flexShrink: 0 }}
-                    >
-                      <FaUser className="me-1" /> Add Profile
-                    </Button>
-                  ) : (
-                    <DropdownButton
-                      variant="outline-secondary"
-                      title={<><FaUser /> {activeProfile?.name || 'Profile'}</>}
-                      id="profile-dropdown"
-                      style={{ flexShrink: 0 }}
-                    >
-                       {profiles.map(profile => (
-                         <Dropdown.Item
-                           key={profile.id}
-                           active={activeProfile?.id === profile.id}
-                           onClick={() => handleProfileChange(profile.id)}
-                         >
-                           <div className="d-flex flex-column">
-                             <span><strong>{profile.name}</strong></span>
-                             <small className="text-muted">@{profile.username} • {maskToken(profile.token)}</small>
-                           </div>
-                         </Dropdown.Item>
-                       ))}
-                       <Dropdown.Divider />
-                       <Dropdown.Item onClick={() => setShowProfileModal(true)}>
-                         + Add/Manage Profiles
-                       </Dropdown.Item>
-                    </DropdownButton>
-                  )}
-
-                   <DropdownButton
-                    variant="outline-secondary"
-                    title={<><FaPalette /> Theme</>}
-                    id="theme-dropdown"
-                    style={{ flexShrink: 0 }}
-                  >
-                    {ACCENT_THEMES.map(theme => (
-                      <Dropdown.Item
-                        key={theme.id}
-                        active={selectedAccent === theme.id}
-                        onClick={() => handleAccentChange(theme.id)}
-                      >
-                        {theme.name}
-                      </Dropdown.Item>
-                    ))}
-                  </DropdownButton>
-
-                    <DropdownButton
-                     variant="outline-secondary"
-                     title={<><FaCog /> Settings</>}
-                     id="settings-dropdown"
-                     style={{ flexShrink: 0 }}
-                    >
-                     <Dropdown.Header>Chart Type</Dropdown.Header>
-                     <Dropdown.Item
-                       active={chartType === 'pie'}
-                       onClick={() => handleChartTypeChange('pie')}
-                     >
-                       Pie Chart
-                     </Dropdown.Item>
-                     <Dropdown.Item
-                       active={chartType === 'bar-horizontal'}
-                       onClick={() => handleChartTypeChange('bar-horizontal')}
-                     >
-                       Bar Chart
-                     </Dropdown.Item>
-                     <Dropdown.Divider />
-                     <Dropdown.Header>Progress Bar Effects</Dropdown.Header>
-                     
-                     <EffectsAccordionSection
-                       title="Glow"
-                       isEnabled={glowEnabled}
-                       onToggle={handleGlowEnabledToggle}
-                       speed={glowSpeed}
-                       onSpeedChange={handleGlowSpeedChange}
-                       isExpanded={glowExpanded}
-                       onExpandToggle={() => setGlowExpanded(!glowExpanded)}
-                     />
-                     
-                     <EffectsAccordionSection
-                       title="Pulse"
-                       isEnabled={pulseEnabled}
-                       onToggle={handlePulseEnabledToggle}
-                       speed={pulseSpeed}
-                       onSpeedChange={handlePulseSpeedChange}
-                       isExpanded={pulseExpanded}
-                       onExpandToggle={() => setPulseExpanded(!pulseExpanded)}
-                     />
-                    </DropdownButton>
-                </div>
-            </div>
-          </Col>
-        </Row>
 
         {error && (
           <Row className="mb-3">
@@ -386,9 +258,9 @@ function App() {
               </Col>
             </Row>
 
-            {/* Copilot Pie Chart - Centered at Top */}
+            {/* Copilot Bar Chart - Full Width */}
             <Row className="mb-3">
-              <Col lg={8} className="mx-auto">
+              <Col>
                 <LazyLoadWrapper 
                   placeholder={<LazyLoadCardSkeleton title="Copilot Usage" />}
                   rootMargin="200px"
@@ -397,7 +269,6 @@ function App() {
                     premiumData={premiumData} 
                     copilotData={summaryData.copilot}
                     quota={1500}
-                    chartType={chartType}
                   />
                 </LazyLoadWrapper>
               </Col>

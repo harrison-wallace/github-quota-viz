@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, ListGroup } from 'react-bootstrap';
+import { Card, Row, Col, Table } from 'react-bootstrap';
 import { FaRobot } from 'react-icons/fa';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList } from 'recharts';
 import { getSavedGlowEnabled, getSavedPulseEnabled } from '../services/themeService';
 
 // Chart colors that work in both light and dark modes
@@ -39,7 +39,7 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'pie' }) => {
+const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'bar' }) => {
   const [chartDims, setChartDims] = useState({ outerRadius: 100, innerRadius: 60, height: 280 });
   const [isMobile, setIsMobile] = useState(false);
   const [effectsEnabled, setEffectsEnabled] = useState(false);
@@ -120,7 +120,6 @@ const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'pie' }
   const data = premiumData || copilotData;
   const totalRequests = data.totalRequests || 0;
   const grossCost = data.totalGrossCost || 0;
-  const netCost = data.totalNetCost || 0;
   const percentage = quota > 0 ? (totalRequests / quota) * 100 : 0;
 
   // Calculate month progress (days elapsed / total days in month)
@@ -147,10 +146,6 @@ const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'pie' }
 
   return (
     <Card className="usage-card h-100">
-      <Card.Header as="h5">
-        <FaRobot className="me-2" />
-        Copilot Premium Requests
-      </Card.Header>
       <Card.Body>
         {/* Chart - Model Distribution */}
         {pieData.length > 0 && (
@@ -200,64 +195,47 @@ const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'pie' }
                      />
                    )}
                 </PieChart>
-               ) : (
-                 <BarChart 
-                   data={pieData} 
-                   layout="vertical"
-                   margin={{ top: 20, right: 30, left: isMobile ? 80 : 100, bottom: 20 }}
-                 >
-                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                   <XAxis 
-                     type="number" 
-                     tick={{ fill: 'var(--text-secondary)', fontSize: isMobile ? 10 : 12 }}
-                   />
-                   <YAxis 
-                     type="category" 
-                     dataKey="name"
-                     tick={{ fill: 'var(--text-secondary)', fontSize: isMobile ? 10 : 12 }}
-                     width={isMobile ? 75 : 90}
-                   />
-                   <Tooltip content={<CustomTooltip />} />
-                   <Bar dataKey="value" name="Requests">
-                     {pieData.map((entry, index) => (
-                       <Cell 
-                         key={`cell-${index}`} 
-                         fill={CHART_COLORS[index % CHART_COLORS.length]}
-                       />
-                     ))}
-                   </Bar>
-                 </BarChart>
-               )}
+                ) : (
+                  <BarChart 
+                    data={pieData} 
+                    layout="vertical"
+                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                    <XAxis 
+                      type="number" 
+                      tick={{ fill: 'var(--text-secondary)', fontSize: isMobile ? 10 : 12 }}
+                    />
+                    <YAxis 
+                      type="category" 
+                      dataKey="name"
+                      tick={false}
+                      width={0}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" name="Requests">
+                      <LabelList 
+                        dataKey="name"
+                        position="insideLeft"
+                        fill="white"
+                        fontSize={16}
+                        fontWeight={600}
+                      />
+                      {pieData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                )}
             </ResponsiveContainer>
           </div>
         )}
 
-        {/* Progress Bar with Month Marker */}
-        <div className="mb-3" style={{ marginTop: isMobile ? '0.5rem' : '1rem' }}>
-          <div className="d-flex justify-content-between align-items-center mb-2" style={{ gap: isMobile ? '0.25rem' : '0.5rem', flexWrap: 'wrap' }}>
-            <span className="fw-bold" style={{ fontSize: isMobile ? '0.8125rem' : '0.9375rem' }}>Requests Used</span>
-            <div className="d-flex align-items-center gap-2" style={{ gap: isMobile ? '0.35rem' : '0.5rem' }}>
-              {/* Subtle pace indicator */}
-              <span style={{
-                fontSize: isMobile ? '0.7rem' : '0.75rem',
-                color: usageAhead ? 'var(--accent-danger)' : 'var(--accent-success)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}>
-                <span style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  backgroundColor: usageAhead ? 'var(--accent-danger)' : 'var(--accent-success)',
-                  display: 'inline-block',
-                  flexShrink: 0
-                }} />
-                {usageAhead ? 'Ahead' : 'On pace'}
-              </span>
-              <span className="badge bg-secondary" style={{ fontSize: isMobile ? '0.7rem' : '0.75rem', padding: isMobile ? '0.35rem 0.6rem' : '0.5rem 0.875rem' }}>{percentage.toFixed(1)}%</span>
-            </div>
-          </div>
+         {/* Progress Bar with Month Marker */}
+         <div className="mb-3" style={{ marginTop: isMobile ? '0.5rem' : '1rem' }}>
           <div style={{ position: 'relative', marginTop: isMobile ? '16px' : '20px' }}>
             {/* Today label above the arrow */}
             <div style={{
@@ -310,24 +288,52 @@ const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'pie' }
                 background: `linear-gradient(90deg, var(--accent-success) 0%, var(--accent-warning) ${monthProgress}%, var(--accent-danger) 100%)`,
                 borderRadius: '0.375rem',
                 transition: 'width 0.5s ease',
-                animation: effectsEnabled ? `glowPulse var(--animation-speed) ease-in-out infinite` : 'none'
+                animation: effectsEnabled ? `glowPulse var(--animation-speed) ease-in-out infinite` : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                paddingLeft: isMobile ? '0.5rem' : '0.75rem',
+                paddingRight: isMobile ? '0.5rem' : '0.75rem',
+                gap: isMobile ? '0.5rem' : '0.75rem'
               }}>
-                 {/* Label inside progress bar */}
-                 <span style={{
-                   position: 'absolute',
-                   left: '50%',
-                   top: '50%',
-                   transform: 'translate(-50%, -50%)',
-                   color: 'white',
-                   fontWeight: 600,
-                   fontSize: isMobile ? '0.75rem' : '0.9375rem',
-                   textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                 {/* Left side: Pace indicator and percentage */}
+                 <div style={{
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: isMobile ? '0.35rem' : '0.5rem',
                    whiteSpace: 'nowrap',
-                   pointerEvents: 'none'
+                   flexShrink: 0
                  }}>
-                   {totalRequests.toFixed(0)} / {quota}
-                 </span>
-               </div>
+                   <span style={{
+                     fontSize: isMobile ? '0.65rem' : '0.7rem',
+                     color: 'white',
+                     display: 'flex',
+                     alignItems: 'center',
+                     gap: '0.25rem',
+                     fontWeight: 600
+                   }}>
+                     <span style={{
+                       width: '5px',
+                       height: '5px',
+                       borderRadius: '50%',
+                       backgroundColor: 'white',
+                       display: 'inline-block',
+                       flexShrink: 0
+                     }} />
+                     {usageAhead ? 'Ahead' : 'On pace'}
+                   </span>
+                   <span style={{
+                     fontSize: isMobile ? '0.7rem' : '0.75rem',
+                     color: 'white',
+                     fontWeight: 600,
+                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                   }}>
+                     {percentage.toFixed(1)}%
+                   </span>
+                  </div>
+                  
+                  {/* Spacer to push count to the right */}
+                  <div style={{ flex: 1 }} />
+                 </div>
              </div>
            </div>
           {/* Legend */}
@@ -362,67 +368,51 @@ const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'pie' }
             </div>
           </Col>
           <Col xs={4} style={{ padding: isMobile ? '0.25rem' : '0.5rem' }}>
-            <div className="stat-box" style={{ 
-              backgroundColor: 'var(--accent-success)', 
-              filter: 'brightness(0.85)', 
-              color: 'white',
-              padding: isMobile ? '0.5rem' : '1.25rem',
-              minHeight: isMobile ? 'auto' : '100%'
-            }}>
-              <div className="stat-label" style={{ color: 'rgba(255,255,255,0.9)', fontSize: isMobile ? '0.6rem' : '0.8125rem', marginBottom: isMobile ? '0.375rem' : '0.625rem' }}>Saved</div>
-              <div className="stat-value" style={{ color: 'white', fontSize: isMobile ? '1rem' : '1.75rem' }}>
-                ${(grossCost - netCost).toFixed(2)}
-              </div>
-            </div>
+            {(() => {
+              const requestsLeft = quota - totalRequests;
+              const isOverQuota = requestsLeft < 0;
+              const displayValue = isOverQuota 
+                ? `+${Math.abs(requestsLeft).toFixed(0)}`
+                : `${requestsLeft.toFixed(0)}`;
+              
+              return (
+                <div className="stat-box" style={{ 
+                  backgroundColor: isOverQuota ? 'var(--accent-danger)' : 'var(--accent-success)', 
+                  filter: 'brightness(0.85)', 
+                  color: 'white',
+                  padding: isMobile ? '0.5rem' : '1.25rem',
+                  minHeight: isMobile ? 'auto' : '100%'
+                }}>
+                  <div className="stat-label" style={{ color: 'rgba(255,255,255,0.9)', fontSize: isMobile ? '0.6rem' : '0.8125rem', marginBottom: isMobile ? '0.375rem' : '0.625rem' }}>Requests Left</div>
+                  <div className="stat-value" style={{ color: 'white', fontSize: isMobile ? '1rem' : '1.75rem' }}>
+                    {displayValue}
+                  </div>
+                </div>
+              );
+            })()}
           </Col>
         </Row>
 
-        {/* Model List */}
+        {/* Model Table */}
         {premiumData?.models && premiumData.models.length > 0 && (
-          <ListGroup variant="flush" className="mt-3">
-            {[...premiumData.models].sort((a, b) => b.requests - a.requests).map((model, idx) => (
-              <ListGroup.Item 
-                key={idx} 
-                className="d-flex justify-content-between align-items-center"
-                style={{ 
-                  padding: isMobile ? '0.5rem 0.25rem' : '0.5rem 0.5rem',
-                  gap: isMobile ? '0.35rem' : '0.5rem',
-                  fontSize: isMobile ? '0.8rem' : 'inherit'
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.375rem'
-                  }}>
-                    <div style={{ 
-                      display: 'inline-block', 
-                      width: '8px', 
-                      height: '8px', 
-                      borderRadius: '50%',
-                      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
-                      flexShrink: 0
-                    }} />
-                    <strong style={{ 
-                      color: 'var(--text-primary)',
-                      fontSize: isMobile ? '0.8rem' : 'inherit',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>{model.name}</strong>
-                  </div>
-                  <small className="text-muted" style={{ fontSize: isMobile ? '0.65rem' : 'inherit', display: 'block', marginTop: '0.125rem' }}>{model.sku}</small>
-                </div>
-                <div className="text-end" style={{ flexShrink: 0 }}>
-                  <div className="fw-bold" style={{ color: 'var(--text-primary)', fontSize: isMobile ? '0.8rem' : 'inherit' }}>
-                    {model.requests.toFixed(1)}
-                  </div>
-                  <small className="text-muted" style={{ fontSize: isMobile ? '0.65rem' : 'inherit' }}>${model.grossCost.toFixed(2)}</small>
-                </div>
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
+          <Table striped bordered hover size="sm" className="mt-3 mb-0">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th className="text-end">Requests</th>
+                <th className="text-end">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...premiumData.models].sort((a, b) => b.requests - a.requests).map((model, idx) => (
+                <tr key={idx}>
+                  <td>{model.name}</td>
+                  <td className="text-end">{model.requests.toFixed(1)}</td>
+                  <td className="text-end">${model.grossCost.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         )}
 
 

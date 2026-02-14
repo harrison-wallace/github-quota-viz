@@ -79,10 +79,27 @@ Classic PATs will NOT work as they don't have the "Plan" permission option.
    
    The token is validated and stored securely in your browser (base64 encoded in localStorage).
 
-5. **Build for production**
-   ```bash
-   npm run build
-   ```
+ 5. **Build for production**
+    ```bash
+    npm run build
+    ```
+
+6. **Access on LAN (optional)**
+    
+    To access the app from other machines on your local network:
+    ```bash
+    npx serve -s build -l 3000
+    ```
+    
+    Then access from another machine using your server's IP address:
+    ```
+    http://<your-machine-ip>:3000
+    ```
+    
+    To find your machine's IP:
+    ```bash
+    hostname -I
+    ```
 
 ### Docker Deployment (Manual)
 
