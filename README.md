@@ -110,50 +110,6 @@ Classic PATs will NOT work as they don't have the "Plan" permission option.
    
    Open `http://localhost:8085` in your browser and add your GitHub profile via the GUI.
 
-### Jenkins Deployment (Tinyclock Pattern)
-
-#### Basic Setup
-
-1. **Configure Jenkins Pipeline**
-   - Create a new Pipeline job in Jenkins
-   - Point to this repository's `Jenkinsfile`
-   - Configure parameters:
-     - `CONTAINER_NAME`: Docker container name (default: `github-quota-viz`)
-     - `PORT`: Exposed port (default: `8085`)
-     - `CONNECT_TO_PROXY`: Connect to Docker proxy network (default: `false`)
-
-2. **Run the pipeline**
-   
-   Jenkins will:
-   - Clean up previous builds
-   - Install Node.js dependencies
-   - Build the React app
-   - Create Docker image
-   - Deploy container with optional proxy networking
-   - Verify deployment
-
-3. **Access the dashboard and add your profile**
-   
-   The pipeline will output the access URL upon success. Open the URL and add your GitHub profile via the GUI.
-
-#### Docker Proxy Networks (Advanced)
-
-If you're using a **Docker proxy network** for reverse proxying or TLS termination:
-
-1. Set `CONNECT_TO_PROXY` parameter to **`true`** when running the Jenkins pipeline
-2. The container will be connected to a Docker network named `proxy`
-3. This allows other services (e.g., nginx, Traefik) to route traffic to the dashboard
-
-**Example proxy setup:**
-- If you have a reverse proxy on a Docker network `proxy` that handles TLS/HTTPS
-- Set `CONNECT_TO_PROXY=true` so the dashboard container can communicate with the proxy
-- Configure your proxy to route requests to `http://github-quota-viz:80`
-
-**Without proxy networking:**
-- The container runs in isolation
-- Set `CONNECT_TO_PROXY=false` (default)
-- Access directly via `http://localhost:8085` or your public IP
-
 ## Configuration
 
 ### Profile Management
