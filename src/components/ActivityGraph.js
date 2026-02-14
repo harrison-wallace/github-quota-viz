@@ -37,7 +37,9 @@ const ActivityGraph = ({ profileId, metric = 'copilot', title = 'Usage Activity'
 
   // Calculate heaviest day
   const heaviestDay = Object.entries(dayOfWeekStats).reduce((max, [day, stats]) => {
-    return stats.totalUsage > (max.stats?.totalUsage || 0) ? { day, stats } : max;
+    const currentTotal = stats?.totalUsage || 0;
+    const maxTotal = max.stats?.totalUsage || 0;
+    return currentTotal > maxTotal ? { day, stats } : max;
   }, {});
 
   return (
@@ -104,10 +106,10 @@ const ActivityGraph = ({ profileId, metric = 'copilot', title = 'Usage Activity'
                     <div className={`day-stat-box ${isHeaviest ? 'heaviest' : ''}`}>
                       <div className="day-stat-label">{day}</div>
                       <div className="day-stat-value">
-                        {stats.averageUsage.toFixed(0)}
+                        {stats?.averageUsage?.toFixed(0) || 0}
                       </div>
                       <div className="day-stat-meta">
-                        {stats.count} days
+                        {stats?.count || 0} days
                       </div>
                     </div>
                   </div>
