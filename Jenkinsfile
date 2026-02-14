@@ -1,10 +1,10 @@
 pipeline {
-    agent any
+    agent { label 'host' }
     
     parameters {
         string(name: 'CONTAINER_NAME', defaultValue: 'github-quota-viz', description: 'Docker container name')
         string(name: 'PORT', defaultValue: '8085', description: 'Port to expose the application')
-        booleanParam(name: 'CONNECT_TO_PROXY', defaultValue: false, description: 'Connect to proxy network')
+        booleanParam(name: 'CONNECT_TO_PROXY', defaultValue: true, description: 'Connect to proxy network')
     }
     
     environment {
