@@ -5,7 +5,6 @@ import ActionsUsageCard from './components/ActionsUsageCard';
 import CopilotUsageCard from './components/CopilotUsageCard';
 import CostSummaryCard from './components/CostSummaryCard';
 import ProjectionCard from './components/ProjectionCard';
-import ActivityGraph from './components/ActivityGraph';
 import { LoadingSkeleton } from './components/SkeletonCard';
 import ProfileModal from './components/ProfileModal';
 import { LazyLoadWrapper, LazyLoadCardSkeleton } from './hooks/useLazyLoad';
@@ -372,23 +371,6 @@ function App() {
               </Col>
             </Row>
 
-            {/* Activity Graph - Day of Week Breakdown */}
-            <Row className="mb-3">
-              <Col>
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Activity Graph" height="400px" />}
-                  rootMargin="300px"
-                >
-                  <ActivityGraph
-                    profileId={activeProfile?.id}
-                    metric="copilot"
-                    title="Copilot Activity - Day of Week Breakdown"
-                    weeks={12}
-                  />
-                </LazyLoadWrapper>
-              </Col>
-            </Row>
-
             {/* Cost Summary Below */}
             <Row className="mb-3">
               <Col>
@@ -429,23 +411,6 @@ function App() {
                   <ActionsUsageCard 
                     actionsData={summaryData.actions}
                     quota={3000}
-                  />
-                </LazyLoadWrapper>
-              </Col>
-            </Row>
-
-            {/* Actions Activity Graph */}
-            <Row className="mb-3">
-              <Col>
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Activity Graph" height="400px" />}
-                  rootMargin="300px"
-                >
-                  <ActivityGraph
-                    profileId={activeProfile?.id}
-                    metric="actions"
-                    title="Actions Activity - Day of Week Breakdown"
-                    weeks={12}
                   />
                 </LazyLoadWrapper>
               </Col>
