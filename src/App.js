@@ -48,6 +48,9 @@ function App() {
   const [activeProfile, setActiveProfileState] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
+  // Card visibility state
+  const [showActionsUsage, setShowActionsUsage] = useState(true);
+
   // Initialize theme and profiles on mount
   useEffect(() => {
     const { mode, accent } = initializeTheme();
@@ -258,9 +261,9 @@ function App() {
               </Col>
             </Row>
 
-            {/* Copilot Bar Chart - Full Width */}
+            {/* Copilot Bar Chart - Centered */}
             <Row className="mb-3">
-              <Col>
+              <Col lg={8} className="mx-auto">
                 <LazyLoadWrapper 
                   placeholder={<LazyLoadCardSkeleton title="Copilot Usage" />}
                   rootMargin="200px"
@@ -269,6 +272,7 @@ function App() {
                     premiumData={premiumData} 
                     copilotData={summaryData.copilot}
                     quota={1500}
+                    onToggleVisibility={setShowActionsUsage}
                   />
                 </LazyLoadWrapper>
               </Col>
@@ -276,7 +280,7 @@ function App() {
 
             {/* Cost Summary Below */}
             <Row className="mb-3">
-              <Col>
+              <Col lg={8} className="mx-auto">
                 <LazyLoadWrapper 
                   placeholder={<LazyLoadCardSkeleton title="Cost Summary" />}
                   rootMargin="300px"
@@ -305,19 +309,21 @@ function App() {
             </Row>
 
             {/* Actions Usage */}
-            <Row className="mb-3">
-              <Col lg={8} className="mx-auto">
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Actions Usage" />}
-                  rootMargin="300px"
-                >
-                  <ActionsUsageCard 
-                    actionsData={summaryData.actions}
-                    quota={3000}
-                  />
-                </LazyLoadWrapper>
-              </Col>
-            </Row>
+            {showActionsUsage && (
+              <Row className="mb-3">
+                <Col lg={8} className="mx-auto">
+                  <LazyLoadWrapper 
+                    placeholder={<LazyLoadCardSkeleton title="Actions Usage" />}
+                    rootMargin="300px"
+                  >
+                    <ActionsUsageCard 
+                      actionsData={summaryData.actions}
+                      quota={3000}
+                    />
+                  </LazyLoadWrapper>
+                </Col>
+              </Row>
+            )}
           </>
         )}
 

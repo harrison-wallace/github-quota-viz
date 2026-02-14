@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Table } from 'react-bootstrap';
-import { FaRobot } from 'react-icons/fa';
+import { Card, Row, Col, Table, Button } from 'react-bootstrap';
+import { FaRobot, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList } from 'recharts';
 import { getSavedGlowEnabled, getSavedPulseEnabled } from '../services/themeService';
 
@@ -39,10 +39,11 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'bar' }) => {
+const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'bar', onToggleVisibility }) => {
   const [chartDims, setChartDims] = useState({ outerRadius: 100, innerRadius: 60, height: 280 });
   const [isMobile, setIsMobile] = useState(false);
   const [effectsEnabled, setEffectsEnabled] = useState(false);
+  const [showActionsUsage, setShowActionsUsage] = useState(true);
 
   // Handle responsive chart sizing
   useEffect(() => {
@@ -146,6 +147,26 @@ const CopilotUsageCard = ({ copilotData, premiumData, quota, chartType = 'bar' }
 
   return (
     <Card className="usage-card h-100">
+      <Card.Header className="d-flex justify-content-between align-items-center">
+        <h5 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <FaRobot />
+          GitHub Copilot Usage
+        </h5>
+        {onToggleVisibility && (
+          <Button 
+            variant="link" 
+            size="sm" 
+            onClick={() => {
+              setShowActionsUsage(!showActionsUsage);
+              onToggleVisibility(!showActionsUsage);
+            }}
+            title={showActionsUsage ? 'Hide Actions Usage' : 'Show Actions Usage'}
+            style={{ padding: 0, color: 'var(--text-secondary)' }}
+          >
+            {showActionsUsage ? <FaEye /> : <FaEyeSlash />}
+          </Button>
+        )}
+      </Card.Header>
       <Card.Body>
         {/* Chart - Model Distribution */}
         {pieData.length > 0 && (
