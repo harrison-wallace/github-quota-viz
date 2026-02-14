@@ -74,12 +74,7 @@ pipeline {
             steps {
                 echo 'Deploying Docker container...'
                 script {
-                    def dockerCmd = """
-                        docker run -d \
-                            --name ${params.CONTAINER_NAME} \
-                            -p ${params.PORT}:80 \
-                            --restart unless-stopped
-                    """
+                    def dockerCmd = "docker run -d --name ${params.CONTAINER_NAME} -p ${params.PORT}:80 --restart unless-stopped"
                     
                     // Add proxy network connection if requested
                     if (params.CONNECT_TO_PROXY) {
