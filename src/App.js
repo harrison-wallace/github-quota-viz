@@ -4,11 +4,15 @@ import { FaGithub, FaPalette, FaSync, FaMoon, FaSun, FaCog, FaUser } from 'react
 import ActionsUsageCard from './components/ActionsUsageCard';
 import CopilotUsageCard from './components/CopilotUsageCard';
 import CostSummaryCard from './components/CostSummaryCard';
+import ProjectionCard from './components/ProjectionCard';
+import ActivityGraph from './components/ActivityGraph';
 import { LoadingSkeleton } from './components/SkeletonCard';
 import ProfileModal from './components/ProfileModal';
+import { LazyLoadWrapper, LazyLoadCardSkeleton } from './hooks/useLazyLoad';
 import { getUsageSummary, getPremiumRequestUsage, transformUsageSummary, transformPremiumRequestData } from './services/githubApi';
 import { accentThemes, initializeTheme, applyAccentColor, toggleMode, getSavedMode } from './services/themeService';
 import { loadProfiles, getActiveProfile, setActiveProfile, onProfilesChange, maskToken } from './services/profileService';
+import { recordDailyUsage } from './services/historicalDataService';
 
 const ACCENT_THEMES = Object.keys(accentThemes).map(key => ({
   id: key,
@@ -94,6 +98,12 @@ function App() {
       setSummaryData(summary);
       setPremiumData(premium);
       setLastUpdated(new Date());
+
+      // Record daily usage for historical tracking
+      if (activeProfile.id && summary) {
+        recordDailyUsage(activeProfile.id, 'copilot', premium?.totalRequests || summary.copilot?.totalRequests || 0);
+        recordDailyUsage(activeProfile.id, 'actions', summary.actions?.minutes || 0);
+      }
     } catch (err) {
       console.error('Error fetching usage data:', err);
       setError(err.message || 'Failed to fetch usage data. Please check your GitHub token and username.');
@@ -327,32 +337,117 @@ function App() {
 
         {!loading && summaryData && (
           <>
+            {/* Copilot Projection - Top Priority */}
+            <Row className="mb-3">
+              <Col lg={8} className="mx-auto">
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Projection" />}
+                  rootMargin="200px"
+                >
+                  <ProjectionCard
+                    profileId={activeProfile?.id}
+                    metric="copilot"
+                    currentUsage={premiumData?.totalRequests || summaryData.copilot?.totalRequests || 0}
+                    quota={1500}
+                    title="Copilot Projection"
+                  />
+                </LazyLoadWrapper>
+              </Col>
+            </Row>
+
             {/* Copilot Pie Chart - Centered at Top */}
             <Row className="mb-3">
               <Col lg={8} className="mx-auto">
-                <CopilotUsageCard 
-                  premiumData={premiumData} 
-                  copilotData={summaryData.copilot}
-                  quota={1500}
-                  chartType={chartType}
-                />
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Copilot Usage" />}
+                  rootMargin="200px"
+                >
+                  <CopilotUsageCard 
+                    premiumData={premiumData} 
+                    copilotData={summaryData.copilot}
+                    quota={1500}
+                    chartType={chartType}
+                  />
+                </LazyLoadWrapper>
+              </Col>
+            </Row>
+
+            {/* Activity Graph - Day of Week Breakdown */}
+            <Row className="mb-3">
+              <Col>
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Activity Graph" height="400px" />}
+                  rootMargin="300px"
+                >
+                  <ActivityGraph
+                    profileId={activeProfile?.id}
+                    metric="copilot"
+                    title="Copilot Activity - Day of Week Breakdown"
+                    weeks={12}
+                  />
+                </LazyLoadWrapper>
               </Col>
             </Row>
 
             {/* Cost Summary Below */}
             <Row className="mb-3">
               <Col>
-                <CostSummaryCard summaryData={summaryData} premiumData={premiumData} />
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Cost Summary" />}
+                  rootMargin="300px"
+                >
+                  <CostSummaryCard summaryData={summaryData} premiumData={premiumData} />
+                </LazyLoadWrapper>
+              </Col>
+            </Row>
+
+            {/* Actions Projection */}
+            <Row className="mb-3">
+              <Col lg={8} className="mx-auto">
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Actions Projection" />}
+                  rootMargin="300px"
+                >
+                  <ProjectionCard
+                    profileId={activeProfile?.id}
+                    metric="actions"
+                    currentUsage={summaryData.actions?.minutes || 0}
+                    quota={3000}
+                    title="Actions Projection"
+                  />
+                </LazyLoadWrapper>
               </Col>
             </Row>
 
             {/* Actions Usage */}
             <Row className="mb-3">
               <Col lg={8} className="mx-auto">
-                <ActionsUsageCard 
-                  actionsData={summaryData.actions}
-                  quota={3000}
-                />
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Actions Usage" />}
+                  rootMargin="300px"
+                >
+                  <ActionsUsageCard 
+                    actionsData={summaryData.actions}
+                    quota={3000}
+                  />
+                </LazyLoadWrapper>
+              </Col>
+            </Row>
+
+            {/* Actions Activity Graph */}
+            <Row className="mb-3">
+              <Col>
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Activity Graph" height="400px" />}
+                  rootMargin="300px"
+                >
+                  <ActivityGraph
+                    profileId={activeProfile?.id}
+                    metric="actions"
+                    title="Actions Activity - Day of Week Breakdown"
+                    weeks={12}
+                  />
+                </LazyLoadWrapper>
               </Col>
             </Row>
           </>
