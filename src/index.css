@@ -816,6 +816,16 @@ a:hover {
   }
 }
 
+/* Pulse Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* Collapse Animation */
 .collapse-content {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
