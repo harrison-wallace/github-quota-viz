@@ -48,9 +48,6 @@ function App() {
   const [activeProfile, setActiveProfileState] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Card visibility state
-  const [showActionsUsage, setShowActionsUsage] = useState(true);
-
   // Initialize theme and profiles on mount
   useEffect(() => {
     const { mode, accent } = initializeTheme();
@@ -224,7 +221,7 @@ function App() {
         EffectsAccordionSection={EffectsAccordionSection}
       />
 
-      <Container fluid className="py-4">
+      <Container fluid className="pt-2 pb-4">
 
         {error && (
           <Row className="mb-3">
@@ -272,7 +269,6 @@ function App() {
                     premiumData={premiumData} 
                     copilotData={summaryData.copilot}
                     quota={1500}
-                    onToggleVisibility={setShowActionsUsage}
                   />
                 </LazyLoadWrapper>
               </Col>
@@ -309,21 +305,19 @@ function App() {
             </Row>
 
             {/* Actions Usage */}
-            {showActionsUsage && (
-              <Row className="mb-3">
-                <Col lg={8} className="mx-auto">
-                  <LazyLoadWrapper 
-                    placeholder={<LazyLoadCardSkeleton title="Actions Usage" />}
-                    rootMargin="300px"
-                  >
-                    <ActionsUsageCard 
-                      actionsData={summaryData.actions}
-                      quota={3000}
-                    />
-                  </LazyLoadWrapper>
-                </Col>
-              </Row>
-            )}
+            <Row className="mb-3">
+              <Col lg={8} className="mx-auto">
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Actions Usage" />}
+                  rootMargin="300px"
+                >
+                  <ActionsUsageCard 
+                    actionsData={summaryData.actions}
+                    quota={3000}
+                  />
+                </LazyLoadWrapper>
+              </Col>
+            </Row>
           </>
         )}
 
