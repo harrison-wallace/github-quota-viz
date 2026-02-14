@@ -47,9 +47,22 @@ export const accentThemes = {
   },
 };
 
+// Animation speed options
+export const animationSpeeds = {
+  slow: { name: 'Slow', value: '5s' },
+  normal: { name: 'Normal', value: '2s' },
+  fast: { name: 'Fast', value: '1s' },
+  ultraFast: { name: 'Ultra Fast', value: '0.5s' },
+};
+
 // Storage event channel for cross-tab synchronization
 const STORAGE_KEY_MODE = 'theme-mode';
 const STORAGE_KEY_ACCENT = 'theme-accent';
+const STORAGE_KEY_GLOW_ENABLED = 'glow-enabled';
+const STORAGE_KEY_PULSE_ENABLED = 'pulse-enabled';
+const STORAGE_KEY_ANIMATION_SPEED = 'animation-speed';
+const STORAGE_KEY_GLOW_SPEED = 'glow-speed';
+const STORAGE_KEY_PULSE_SPEED = 'pulse-speed';
 
 /**
  * Apply dark/light mode to document
@@ -88,6 +101,30 @@ export const applyAccentColor = (accentName) => {
 };
 
 /**
+ * Apply animation speed
+ * @param {string} speedKey - Key from animationSpeeds object
+ */
+export const applyAnimationSpeed = (speedKey) => {
+  const speed = animationSpeeds[speedKey] || animationSpeeds.normal;
+  const root = document.documentElement;
+  root.style.setProperty('--animation-speed', speed.value);
+  
+  // Store preference and notify other tabs
+  localStorage.setItem(STORAGE_KEY_ANIMATION_SPEED, speedKey);
+  
+  // Dispatch event for listeners
+  window.dispatchEvent(new CustomEvent('animationSpeedChange', { detail: { speed: speedKey } }));
+};
+
+/**
+ * Get saved animation speed from localStorage
+ * @returns {string} - Speed key
+ */
+export const getSavedAnimationSpeed = () => {
+  return localStorage.getItem(STORAGE_KEY_ANIMATION_SPEED) || 'normal';
+};
+
+/**
  * Get saved mode from localStorage
  * @returns {string} - 'light' or 'dark'
  */
@@ -112,6 +149,102 @@ export const getSavedAccent = () => {
 };
 
 /**
+ * Toggle glow effect
+ * @returns {boolean} - New glow enabled state
+ */
+export const toggleGlowEnabled = () => {
+  const currentState = getSavedGlowEnabled();
+  const newState = !currentState;
+  applyGlowEnabled(newState);
+  return newState;
+};
+
+/**
+ * Apply glow enabled state
+ * @param {boolean} enabled - Whether to enable glow effect
+ */
+export const applyGlowEnabled = (enabled) => {
+  localStorage.setItem(STORAGE_KEY_GLOW_ENABLED, enabled ? 'true' : 'false');
+  
+  // Dispatch event for listeners
+  window.dispatchEvent(new CustomEvent('glowEnabledChange', { detail: { enabled } }));
+};
+
+/**
+ * Get saved glow enabled state from localStorage
+ * @returns {boolean} - Whether glow is enabled
+ */
+export const getSavedGlowEnabled = () => {
+  const saved = localStorage.getItem(STORAGE_KEY_GLOW_ENABLED);
+  return saved === 'true'; // Default to false
+};
+
+/**
+ * Toggle pulse effect
+ * @returns {boolean} - New pulse enabled state
+ */
+export const togglePulseEnabled = () => {
+  const currentState = getSavedPulseEnabled();
+  const newState = !currentState;
+  applyPulseEnabled(newState);
+  return newState;
+};
+
+/**
+ * Apply pulse enabled state
+ * @param {boolean} enabled - Whether to enable pulse effect
+ */
+export const applyPulseEnabled = (enabled) => {
+  localStorage.setItem(STORAGE_KEY_PULSE_ENABLED, enabled ? 'true' : 'false');
+  
+  // Dispatch event for listeners
+  window.dispatchEvent(new CustomEvent('pulseEnabledChange', { detail: { enabled } }));
+};
+
+/**
+ * Get saved pulse enabled state from localStorage
+ * @returns {boolean} - Whether pulse is enabled
+ */
+export const getSavedPulseEnabled = () => {
+  const saved = localStorage.getItem(STORAGE_KEY_PULSE_ENABLED);
+  return saved === 'true'; // Default to false
+};
+
+/**
+ * Apply glow animation speed
+ * @param {string} speedKey - Key from animationSpeeds object
+ */
+export const applyGlowSpeed = (speedKey) => {
+  localStorage.setItem(STORAGE_KEY_GLOW_SPEED, speedKey);
+  window.dispatchEvent(new CustomEvent('glowSpeedChange', { detail: { speed: speedKey } }));
+};
+
+/**
+ * Get saved glow speed from localStorage
+ * @returns {string} - Speed key
+ */
+export const getSavedGlowSpeed = () => {
+  return localStorage.getItem(STORAGE_KEY_GLOW_SPEED) || 'normal';
+};
+
+/**
+ * Apply pulse animation speed
+ * @param {string} speedKey - Key from animationSpeeds object
+ */
+export const applyPulseSpeed = (speedKey) => {
+  localStorage.setItem(STORAGE_KEY_PULSE_SPEED, speedKey);
+  window.dispatchEvent(new CustomEvent('pulseSpeedChange', { detail: { speed: speedKey } }));
+};
+
+/**
+ * Get saved pulse speed from localStorage
+ * @returns {string} - Speed key
+ */
+export const getSavedPulseSpeed = () => {
+  return localStorage.getItem(STORAGE_KEY_PULSE_SPEED) || 'normal';
+};
+
+/**
  * Toggle between light and dark mode
  * @returns {string} - New mode
  */
@@ -128,9 +261,15 @@ export const toggleMode = () => {
 export const initializeTheme = () => {
   const savedMode = getSavedMode();
   const savedAccent = getSavedAccent();
+  const savedGlowEnabled = getSavedGlowEnabled();
+  const savedPulseEnabled = getSavedPulseEnabled();
+  const savedSpeed = getSavedAnimationSpeed();
+  const savedGlowSpeed = getSavedGlowSpeed();
+  const savedPulseSpeed = getSavedPulseSpeed();
   
   applyMode(savedMode);
   applyAccentColor(savedAccent);
+  applyAnimationSpeed(savedSpeed);
   
   // Listen for storage events from other tabs
   window.addEventListener('storage', (e) => {
@@ -138,19 +277,50 @@ export const initializeTheme = () => {
       applyMode(e.newValue);
     } else if (e.key === STORAGE_KEY_ACCENT && e.newValue) {
       applyAccentColor(e.newValue);
+    } else if (e.key === STORAGE_KEY_GLOW_ENABLED && e.newValue !== null) {
+      applyGlowEnabled(e.newValue === 'true');
+    } else if (e.key === STORAGE_KEY_PULSE_ENABLED && e.newValue !== null) {
+      applyPulseEnabled(e.newValue === 'true');
+    } else if (e.key === STORAGE_KEY_ANIMATION_SPEED && e.newValue) {
+      applyAnimationSpeed(e.newValue);
+    } else if (e.key === STORAGE_KEY_GLOW_SPEED && e.newValue) {
+      applyGlowSpeed(e.newValue);
+    } else if (e.key === STORAGE_KEY_PULSE_SPEED && e.newValue) {
+      applyPulseSpeed(e.newValue);
     }
   });
   
-  return { mode: savedMode, accent: savedAccent };
+  return { 
+    mode: savedMode, 
+    accent: savedAccent, 
+    glowEnabled: savedGlowEnabled,
+    pulseEnabled: savedPulseEnabled,
+    speed: savedSpeed, 
+    glowSpeed: savedGlowSpeed, 
+    pulseSpeed: savedPulseSpeed 
+  };
 };
 
 const themeService = {
   accentThemes,
+  animationSpeeds,
   applyMode,
   applyAccentColor,
+  applyAnimationSpeed,
+  applyGlowSpeed,
+  applyPulseSpeed,
   getSavedMode,
   getSavedAccent,
+  getSavedAnimationSpeed,
+  getSavedGlowSpeed,
+  getSavedPulseSpeed,
   toggleMode,
+  toggleGlowEnabled,
+  applyGlowEnabled,
+  getSavedGlowEnabled,
+  togglePulseEnabled,
+  applyPulseEnabled,
+  getSavedPulseEnabled,
   initializeTheme,
 };
 

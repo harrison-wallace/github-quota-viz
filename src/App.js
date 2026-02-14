@@ -7,7 +7,9 @@ import CostSummaryCard from './components/CostSummaryCard';
 import ProjectionCard from './components/ProjectionCard';
 import { LoadingSkeleton } from './components/SkeletonCard';
 import ProfileModal from './components/ProfileModal';
+import EffectsAccordionSection from './components/EffectsAccordionSection';
 import { LazyLoadWrapper, LazyLoadCardSkeleton } from './hooks/useLazyLoad';
+import { useSettingsState } from './hooks/useSettingsState';
 import { getUsageSummary, getPremiumRequestUsage, transformUsageSummary, transformPremiumRequestData } from './services/githubApi';
 import { accentThemes, initializeTheme, applyAccentColor, toggleMode, getSavedMode } from './services/themeService';
 import { loadProfiles, getActiveProfile, setActiveProfile, onProfilesChange, maskToken } from './services/profileService';
@@ -28,11 +30,24 @@ function App() {
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedAccent, setSelectedAccent] = useState('ocean');
-  
-  // Chart type state with localStorage
-  const [chartType, setChartType] = useState(() => {
-    return localStorage.getItem('copilot-chart-type') || 'pie';
-  });
+
+  // Settings state using custom hook
+  const {
+    chartType,
+    glowEnabled,
+    pulseEnabled,
+    glowSpeed,
+    pulseSpeed,
+    glowExpanded,
+    pulseExpanded,
+    handleChartTypeChange,
+    handleGlowEnabledToggle,
+    handlePulseEnabledToggle,
+    handleGlowSpeedChange,
+    handlePulseSpeedChange,
+    setGlowExpanded,
+    setPulseExpanded,
+  } = useSettingsState();
 
   // Profile state
   const [profiles, setProfiles] = useState([]);
@@ -171,11 +186,6 @@ function App() {
     setSelectedAccent(accentId);
   };
 
-  const handleChartTypeChange = (type) => {
-    setChartType(type);
-    localStorage.setItem('copilot-chart-type', type);
-  };
-
   const handleDarkModeToggle = () => {
     const newMode = toggleMode();
     setIsDarkMode(newMode === 'dark');
@@ -294,26 +304,48 @@ function App() {
                     ))}
                   </DropdownButton>
 
-                  <DropdownButton
-                    variant="outline-secondary"
-                    title={<><FaCog /> Settings</>}
-                    id="settings-dropdown"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <Dropdown.Header>Chart Type</Dropdown.Header>
-                    <Dropdown.Item
-                      active={chartType === 'pie'}
-                      onClick={() => handleChartTypeChange('pie')}
+                    <DropdownButton
+                     variant="outline-secondary"
+                     title={<><FaCog /> Settings</>}
+                     id="settings-dropdown"
+                     style={{ flexShrink: 0 }}
                     >
-                      Pie Chart
-                    </Dropdown.Item>
-                    <Dropdown.Item
-                      active={chartType === 'bar-horizontal'}
-                      onClick={() => handleChartTypeChange('bar-horizontal')}
-                    >
-                      Bar Chart
-                    </Dropdown.Item>
-                  </DropdownButton>
+                     <Dropdown.Header>Chart Type</Dropdown.Header>
+                     <Dropdown.Item
+                       active={chartType === 'pie'}
+                       onClick={() => handleChartTypeChange('pie')}
+                     >
+                       Pie Chart
+                     </Dropdown.Item>
+                     <Dropdown.Item
+                       active={chartType === 'bar-horizontal'}
+                       onClick={() => handleChartTypeChange('bar-horizontal')}
+                     >
+                       Bar Chart
+                     </Dropdown.Item>
+                     <Dropdown.Divider />
+                     <Dropdown.Header>Progress Bar Effects</Dropdown.Header>
+                     
+                     <EffectsAccordionSection
+                       title="Glow"
+                       isEnabled={glowEnabled}
+                       onToggle={handleGlowEnabledToggle}
+                       speed={glowSpeed}
+                       onSpeedChange={handleGlowSpeedChange}
+                       isExpanded={glowExpanded}
+                       onExpandToggle={() => setGlowExpanded(!glowExpanded)}
+                     />
+                     
+                     <EffectsAccordionSection
+                       title="Pulse"
+                       isEnabled={pulseEnabled}
+                       onToggle={handlePulseEnabledToggle}
+                       speed={pulseSpeed}
+                       onSpeedChange={handlePulseSpeedChange}
+                       isExpanded={pulseExpanded}
+                       onExpandToggle={() => setPulseExpanded(!pulseExpanded)}
+                     />
+                    </DropdownButton>
                 </div>
             </div>
           </Col>

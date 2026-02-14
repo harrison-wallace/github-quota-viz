@@ -11,6 +11,9 @@
   --accent-danger: #F44336;
   --accent-info: #00BCD4;
   
+  /* Animation Speed (set by theme service) */
+  --animation-speed: 2s;
+  
   /* Light Mode Colors */
   --bg-primary: #f8f9fa;
   --bg-secondary: #ffffff;
@@ -611,6 +614,157 @@ a:hover {
   margin-left: 0.5rem;
 }
 
+/* Settings Dropdown Styles */
+.settings-effect-item {
+  padding-left: 1rem !important;
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+}
+
+.settings-speed-header {
+  font-size: 0.875rem !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.settings-speed-item {
+  padding-left: 1.5rem !important;
+  font-size: 0.875rem !important;
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+/* Effects Accordion Styles */
+.effects-accordion-header {
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+  user-select: none !important;
+}
+
+.effects-accordion-header:hover {
+  background-color: var(--bg-hover) !important;
+  color: var(--accent-primary) !important;
+}
+
+.effects-accordion-header-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.effects-accordion-chevron {
+  transition: transform 0.2s ease;
+  margin-right: 0.25rem;
+  flex-shrink: 0;
+}
+
+.effects-accordion-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.effects-accordion-title {
+  flex: 1;
+}
+
+.effects-accordion-status {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.effects-accordion-status.enabled {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.effects-accordion-status.disabled {
+  color: var(--text-secondary);
+}
+
+.effects-accordion-content {
+  background-color: rgba(0, 0, 0, 0.05);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+.effects-accordion-toggle {
+  padding: 0.35rem 1rem 0.35rem 2rem !important;
+  font-size: 0.9rem !important;
+  cursor: pointer;
+  color: var(--text-primary);
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  outline: none;
+}
+
+.effects-accordion-toggle:hover {
+  background-color: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.effects-accordion-toggle.active,
+.effects-accordion-toggle-text.active {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.effects-accordion-speed-section {
+  padding: 0.25rem 0;
+}
+
+.effects-accordion-speed-label {
+  padding: 0.4rem 1rem 0.2rem 2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.effects-accordion-speed-item {
+  padding: 0.3rem 1rem 0.3rem 2.5rem !important;
+  font-size: 0.875rem !important;
+  cursor: pointer;
+  color: var(--text-primary);
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  outline: none;
+}
+
+.effects-accordion-speed-item:hover {
+  background-color: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.effects-accordion-speed-item.active {
+  background-color: var(--accent-primary);
+  color: white;
+  font-weight: 600;
+}
+
 /* ============================================
    List Groups & Model Items
    ============================================ */
@@ -823,6 +977,38 @@ a:hover {
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+/* Glow Effect for Progress Bar */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.5), 0 0 10px rgba(33, 150, 243, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(33, 150, 243, 0.8), 0 0 20px rgba(33, 150, 243, 0.6);
+  }
+}
+
+/* Pulse Effect for Progress Bar */
+@keyframes progressPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Combined Glow & Pulse */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.5), 0 0 10px rgba(33, 150, 243, 0.3);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(33, 150, 243, 0.8), 0 0 20px rgba(33, 150, 243, 0.6);
+    opacity: 0.9;
   }
 }
 
@@ -1059,22 +1245,28 @@ a:hover {
     padding-left: 0;
   }
 
-  /* Stat boxes - full width stacking */
-  .stat-box {
-    padding: 0.65rem;
-    margin-bottom: 0.5rem;
-  }
+   /* Stat boxes - full width stacking */
+   .stat-box {
+     padding: 0.65rem;
+     margin-bottom: 0.5rem;
+     border-radius: 8px;
+     min-height: 60px;
+     display: flex;
+     flex-direction: column;
+     justify-content: center;
+   }
 
-  .stat-value {
-    font-size: 1.25rem;
-    font-weight: 700;
-  }
+   .stat-value {
+     font-size: 1.25rem;
+     font-weight: 700;
+     line-height: 1.3;
+   }
 
-  .stat-label {
-    font-size: 0.65rem;
-    letter-spacing: 0.02em;
-    font-weight: 600;
-  }
+   .stat-label {
+     font-size: 0.65rem;
+     letter-spacing: 0.02em;
+     font-weight: 600;
+   }
 
   /* Buttons - increase hit target size for touch */
   .btn {
@@ -1124,18 +1316,20 @@ a:hover {
     padding: 0.5rem 0.625rem;
   }
 
-  /* Progress bars - more readable */
-  .progress {
-    height: 32px;
-    border-radius: 10px;
-    margin-bottom: 0.75rem;
-  }
+   /* Progress bars - more readable */
+   .progress {
+     height: 32px;
+     border-radius: 10px;
+     margin-bottom: 0.75rem;
+     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+   }
 
-  .progress-bar {
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 32px;
-  }
+   .progress-bar {
+     font-size: 0.75rem;
+     font-weight: 600;
+     line-height: 32px;
+     padding: 0 0.5rem;
+   }
 
   /* Badges more visible */
   .badge {
@@ -1245,82 +1439,100 @@ a:hover {
     height: 1.25rem;
   }
 
-  /* Hide unnecessary elements on tiny screens */
-  @media (max-width: 480px) {
-    .app-container {
-      padding-top: 0.25rem;
-    }
+   /* Hide unnecessary elements on tiny screens */
+   @media (max-width: 480px) {
+     .app-container {
+       padding-top: 0.25rem;
+     }
 
-    .container-fluid {
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-    }
+     .container-fluid {
+       padding-left: 0.5rem;
+       padding-right: 0.5rem;
+     }
 
-    h1 {
-      font-size: 1.1rem;
-    }
+     h1 {
+       font-size: 1.1rem;
+     }
 
-    h5 {
-      font-size: 0.9rem;
-    }
+     h5 {
+       font-size: 0.9rem;
+     }
 
-    .stat-value {
-      font-size: 1.1rem;
-    }
+     .stat-value {
+       font-size: 1.1rem;
+     }
 
-    .display-6 {
-      font-size: 1rem;
-    }
+     .display-6 {
+       font-size: 1rem;
+     }
 
-    .btn {
-      padding: 0.4rem 0.75rem;
-      min-height: 40px;
-      font-size: 0.8rem;
-    }
+     .btn {
+       padding: 0.4rem 0.75rem;
+       min-height: 40px;
+       font-size: 0.8rem;
+     }
 
-    .usage-card .card-header {
-      padding: 0.625rem;
-      font-size: 0.85rem;
-    }
+     .usage-card .card-header {
+       padding: 0.625rem;
+       font-size: 0.85rem;
+       gap: 0.35rem;
+     }
 
-    .usage-card .card-body {
-      padding: 0.625rem;
-    }
+     .usage-card .card-body {
+       padding: 0.625rem;
+     }
 
-    .form-control,
-    .input-group-text {
-      padding: 0.4rem 0.5rem;
-      min-height: 40px;
-      font-size: 0.95rem;
-    }
+     .form-control,
+     .input-group-text {
+       padding: 0.4rem 0.5rem;
+       min-height: 40px;
+       font-size: 0.95rem;
+     }
 
-    .progress {
-      height: 28px;
-    }
+     .progress {
+       height: 28px;
+     }
 
-    .progress-bar {
-      font-size: 0.7rem;
-      line-height: 28px;
-    }
+     .progress-bar {
+       font-size: 0.7rem;
+       line-height: 28px;
+     }
 
-    .stat-box {
-      padding: 0.5rem;
-    }
+     .stat-box {
+       padding: 0.5rem;
+     }
 
-    .table {
-      font-size: 0.65rem;
-    }
+     .table {
+       font-size: 0.65rem;
+     }
 
-    .table thead th,
-    .table tbody td {
-      padding: 0.3rem 0.2rem;
-    }
+     .table thead th,
+     .table tbody td {
+       padding: 0.3rem 0.2rem;
+     }
 
-    .dropdown-menu {
-      width: 85vw;
-      max-width: 280px;
-    }
-  }
+     .dropdown-menu {
+       width: 85vw;
+       max-width: 280px;
+     }
+     
+     /* Extra tweaks for ultra-small screens */
+     .list-group-item {
+       padding: 0.35rem 0.25rem;
+       font-size: 0.75rem;
+     }
+     
+     .badge {
+       padding: 0.3rem 0.5rem;
+       font-size: 0.65rem;
+     }
+     
+     .stat-label {
+       font-size: 0.55rem;
+       margin-bottom: 0.25rem;
+       letter-spacing: 0.01em;
+     }
+   }
 }
 
 /* ============================================
