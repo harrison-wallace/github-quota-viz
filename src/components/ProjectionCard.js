@@ -9,7 +9,8 @@ const ProjectionCard = ({
   copilotQuota = 1500,
   actionsUsage,
   actionsQuota = 3000,
-  title = 'Usage Projection' 
+  title = 'Usage Projection',
+  className = ''
 }) => {
   const copilotBurnRate = useMemo(() => {
     return calculateBurnRate(profileId, 'copilot', 7);
@@ -44,7 +45,7 @@ const ProjectionCard = ({
   } = copilotProjection;
 
   return (
-    <Card className="usage-card projection-card compact-projection-card h-100">
+    <Card className={`usage-card projection-card compact-projection-card h-100 ${className}`}>
       <Card.Header as="h6" className="compact-header">
         <FaChartLine className="me-2" />
         {title}

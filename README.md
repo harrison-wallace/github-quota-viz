@@ -8,6 +8,7 @@ A production-ready, self-hosted React application for visualizing GitHub Actions
 
 - **Real-time Usage Tracking**: Monitor GitHub Actions minutes and Copilot Premium Requests
 - **Cost Breakdown**: View gross costs, net costs, and subscription savings
+- **Available Models**: Auto-updating list of all GitHub Copilot AI models with premium request multipliers
 - **Visual Analytics**: Progress bars and pie charts showing usage distribution
 - **Multiple Themes**: 5 built-in color themes (Default, Ocean Blue, Sunset, Forest, Purple Haze)
 - **Responsive Design**: Mobile-friendly interface built with Bootstrap 5
@@ -21,7 +22,9 @@ A production-ready, self-hosted React application for visualizing GitHub Actions
 - **Frontend**: React 18, Bootstrap 5, React-Bootstrap
 - **Charts**: Recharts
 - **HTTP Client**: Axios with retry logic
-- **Deployment**: Docker (nginx:alpine)
+- **Web Scraping**: Node.js with Cheerio (for auto-updating models)
+- **Background Jobs**: Cron (inside container for daily model updates)
+- **Deployment**: Docker (nginx:alpine with multi-stage build)
 - **CI/CD**: Jenkins (declarative pipeline)
 
 ### API Endpoints Used
@@ -84,22 +87,7 @@ Classic PATs will NOT work as they don't have the "Plan" permission option.
     npm run build
     ```
 
-6. **Access on LAN (optional)**
-    
-    To access the app from other machines on your local network:
-    ```bash
-    npx serve -s build -l 3000
-    ```
-    
-    Then access from another machine using your server's IP address:
-    ```
-    http://<your-machine-ip>:3000
-    ```
-    
-    To find your machine's IP:
-    ```bash
-    hostname -I
-    ```
+    The build artifacts will be in the `build/` directory.
 
 ### Docker Deployment (Manual)
 
@@ -126,6 +114,8 @@ Classic PATs will NOT work as they don't have the "Plan" permission option.
 4. **Access the dashboard and add your profile**
    
    Open `http://localhost:8085` in your browser and add your GitHub profile via the GUI.
+
+**Note**: The container now includes a background service that automatically scrapes GitHub Docs for the latest Copilot models every 24 hours. Initial scrape runs on container startup.
 
 ## Configuration
 
@@ -160,10 +150,28 @@ Profiles are managed entirely through the GUI:
 5. **Cost Summary Card**: Shows gross costs, net costs, and savings
 6. **Actions Usage Card**: Displays Actions minutes with progress bar
 7. **Copilot Usage Card**: Shows Copilot requests with pie chart breakdown
+8. **Available Models Card**: Auto-updating list with sortable columns, color-coded multipliers (green to red), and provider filtering
 
 ### Auto-Refresh
 
 The dashboard automatically refreshes data every hour when the tab is visible.
+
+### Available Copilot Models
+
+The dashboard includes an **Available Models** card that displays all GitHub Copilot AI models:
+
+- **Auto-updating**: Data is scraped from GitHub Docs every 24 hours via background cron job
+- **Provider Filter**: Filter models by provider (OpenAI, Anthropic, Google, xAI, etc.)
+- **Sortable Columns**: Click any column header to sort by Model, Provider, Status, Paid Plans, or Free Plan
+- **Status Indicators**: Shows GA (Generally Available), Preview, or Closing/Retiring status
+- **Premium Multipliers**: Color-coded badges (green → red) showing request cost multipliers for both paid and free plans
+  - **Green**: Included (0x) or low cost (≤0.5x)
+  - **Orange**: Medium cost (≤1x)
+  - **Red**: High cost (≤2x)
+  - **Purple**: Premium tier (>2x)
+- **Self-contained**: All data stays within the container - no external API dependencies
+
+The models data is served from `/models.json` and polled by the React app every 24 hours. Default sort is by Paid Plans (highest multipliers first).
 
 ### Understanding the Data
 
@@ -179,15 +187,20 @@ github-quota-viz/
 ├── public/
 │   ├── index.html              # HTML template
 │   └── favicon.ico
+├── scripts/
+│   ├── scrape-models.js        # GitHub Docs scraper for models data
+│   └── start.sh                # Container entrypoint with cron
 ├── src/
 │   ├── components/
 │   │   ├── ActionsUsageCard.js     # Actions usage display
+│   │   ├── AvailableModelsCard.js  # Available Copilot models with multipliers
 │   │   ├── CopilotUsageCard.js     # Copilot usage with pie chart
 │   │   ├── CostSummaryCard.js      # Cost breakdown table
 │   │   ├── ProfileModal.js         # Profile management GUI
 │   │   └── SkeletonCard.js         # Loading skeletons
 │   ├── services/
 │   │   ├── githubApi.js            # API client with retry logic
+│   │   ├── modelsService.js        # Models data fetching and polling
 │   │   ├── profileService.js       # Profile CRUD operations
 │   │   └── themeService.js         # Theme management
 │   ├── App.js                      # Main application
@@ -232,6 +245,11 @@ The app includes retry logic with exponential backoff to handle temporary failur
 ```bash
 docker logs github-quota-viz
 ```
+
+**Models not updating:**
+- The scraper runs every 24 hours via cron (inside the container)
+- Check `/var/log/cron.log` in the container for scraper output
+- Manual re-scrape: `docker exec github-quota-viz node /app/scripts/scrape-models.js`
 
 **Verify container is running:**
 ```bash

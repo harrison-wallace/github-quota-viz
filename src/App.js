@@ -4,6 +4,7 @@ import { FaGithub, FaUser } from 'react-icons/fa';
 import CopilotProgressBar from './components/CopilotProgressBar';
 import ModelBreakdownTable from './components/ModelBreakdownTable';
 import CostSummaryCard from './components/CostSummaryCard';
+import AvailableModelsCard from './components/AvailableModelsCard';
 import ProjectionCard from './components/ProjectionCard';
 import { LoadingSkeleton } from './components/SkeletonCard';
 import ProfileModal from './components/ProfileModal';
@@ -263,6 +264,7 @@ function App() {
                   rootMargin="200px"
                 >
                   <ProjectionCard
+                    className="h-100"
                     profileId={activeProfile?.id}
                     copilotUsage={premiumData?.totalRequests || summaryData.copilot?.totalRequests || 0}
                     copilotQuota={1500}
@@ -278,6 +280,7 @@ function App() {
                   rootMargin="200px"
                 >
                   <ModelBreakdownTable
+                    className="h-100"
                     premiumData={premiumData}
                     copilotData={summaryData.copilot}
                   />
@@ -293,6 +296,18 @@ function App() {
                   rootMargin="300px"
                 >
                   <CostSummaryCard summaryData={summaryData} premiumData={premiumData} />
+                </LazyLoadWrapper>
+              </Col>
+            </Row>
+
+            {/* Available Models Below Cost Summary */}
+            <Row className="mb-2">
+              <Col>
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Available Models" />}
+                  rootMargin="300px"
+                >
+                  <AvailableModelsCard />
                 </LazyLoadWrapper>
               </Col>
             </Row>

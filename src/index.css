@@ -426,6 +426,174 @@ a:hover {
   border: 1px solid var(--border-color);
 }
 
+/* ============================================
+   Available Models Table - Enhanced Styles
+   ============================================ */
+
+.models-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.available-models-table {
+  margin-bottom: 0;
+}
+
+.available-models-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.available-models-table thead th {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+  padding: 0.75rem 0.5rem;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.sortable-header:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+.sort-icon {
+  font-size: 0.75rem;
+  margin-left: 0.25rem;
+  opacity: 0.4;
+  vertical-align: middle;
+}
+
+.sort-icon.active {
+  opacity: 1;
+  color: var(--accent-primary);
+}
+
+.sortable-header:hover .sort-icon {
+  opacity: 0.7;
+}
+
+/* Multiplier Badges - Green to Red gradient */
+.multiplier-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  min-width: 70px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.multiplier-badge.included {
+  background: linear-gradient(135deg, var(--accent-success), #2e7d32);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.multiplier-badge.low {
+  background: linear-gradient(135deg, #66bb6a, #43a047);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.multiplier-badge.medium {
+  background: linear-gradient(135deg, #ffa726, #f57c00);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.multiplier-badge.high {
+  background: linear-gradient(135deg, #ef5350, #d32f2f);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.multiplier-badge.premium {
+  background: linear-gradient(135deg, #ab47bc, #7b1fa2);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.multiplier-badge.unavailable {
+  background-color: var(--text-muted);
+  color: var(--text-inverse);
+  opacity: 0.7;
+}
+
+/* Dark mode adjustments for better visibility */
+[data-theme="dark"] .multiplier-badge.included {
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .multiplier-badge.low {
+  background: linear-gradient(135deg, #81c784, #4caf50);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .multiplier-badge.medium {
+  background: linear-gradient(135deg, #ffb74d, #f57c00);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .multiplier-badge.high {
+  background: linear-gradient(135deg, #e57373, #c62828);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .multiplier-badge.premium {
+  background: linear-gradient(135deg, #ba68c8, #8e24aa);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .multiplier-badge.unavailable {
+  background-color: var(--border-strong);
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* Table row hover effect */
+.available-models-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .available-models-table {
+    font-size: 0.75rem;
+  }
+
+  .available-models-table thead th,
+  .available-models-table tbody td {
+    padding: 0.5rem 0.35rem;
+  }
+
+  .multiplier-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.6875rem;
+    min-width: 55px;
+  }
+
+  .sort-icon {
+    font-size: 0.625rem;
+  }
+}
+
 /* Alerts */
 .alert {
   border-radius: 10px;

@@ -10,7 +10,7 @@ const CHART_COLORS = [
   'var(--chart-cyan)'
 ];
 
-const ModelBreakdownTable = ({ premiumData, copilotData }) => {
+const ModelBreakdownTable = ({ premiumData, copilotData, className = '' }) => {
   if (!premiumData && !copilotData) {
     return null;
   }
@@ -30,7 +30,7 @@ const ModelBreakdownTable = ({ premiumData, copilotData }) => {
   const totalRequests = data.totalRequests || 0;
 
   return (
-    <Card className="usage-card model-breakdown-card h-100">
+    <Card className={`usage-card model-breakdown-card h-100 ${className}`}>
       <Card.Header as="h6" className="compact-header">
         <FaRobot className="me-2" />
         Models Used
