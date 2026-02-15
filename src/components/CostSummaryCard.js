@@ -54,7 +54,7 @@ const CostSummaryCard = ({ summaryData }) => {
           </Row>
 
           {/* Detailed Breakdown Table */}
-          <Table striped bordered hover size="sm" className="mb-3">
+          <Table striped bordered hover size="sm" className="mb-3 cost-summary-table">
             <thead>
               <tr>
                 <th>Product</th>
@@ -99,7 +99,7 @@ const CostSummaryCard = ({ summaryData }) => {
               )}
             </tbody>
             <tfoot>
-              <tr className="table-active">
+              <tr className="cost-summary-total-row">
                 <td><strong>Total</strong></td>
                 <td>-</td>
                 <td><strong>${totalGross.toFixed(2)}</strong></td>

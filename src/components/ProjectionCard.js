@@ -91,7 +91,7 @@ const ProjectionCard = ({
               now={Math.min(copilotPercentage, 100)}
               variant={copilotPercentage <= 75 ? 'success' : copilotPercentage <= 90 ? 'warning' : 'danger'}
               className="projection-progress-bar"
-              label="Copilot projected end-of-month usage"
+              label=""
               srOnly
               aria-valuetext={`${copilotProjectedTotal.toFixed(0)} of ${copilotQuota}`}
             />

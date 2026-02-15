@@ -418,6 +418,29 @@ a:hover {
   font-weight: 600;
 }
 
+.cost-summary-table tfoot tr {
+  background: transparent;
+}
+
+.cost-summary-total-row {
+  background-color: var(--bg-secondary);
+  border-top: 2px solid var(--border-color);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .cost-summary-total-row {
+  background-color: var(--bg-card);
+  border-top-color: var(--border-light);
+}
+
+.cost-summary-total-row td {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .cost-summary-total-row td {
+  color: var(--text-secondary);
+}
+
 .table-striped tbody tr:nth-of-type(odd) {
   background-color: var(--bg-hover);
 }
@@ -457,6 +480,11 @@ a:hover {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   white-space: nowrap;
+}
+
+.available-models-table thead th:nth-child(3),
+.available-models-table tbody td:nth-child(3) {
+  font-size: 0.75rem;
 }
 
 .sortable-header {
