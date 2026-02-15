@@ -36,16 +36,16 @@ const CostSummaryCard = ({ summaryData }) => {
       <Collapse in={isExpanded}>
         <Card.Body>
           {/* Summary Metrics */}
-          <Row className="mb-4">
-            <Col md={4} className="text-center mb-3 mb-md-0">
+          <Row className="mb-4 cost-summary-row">
+            <Col xs="auto" md={4} className="text-center mb-3 mb-md-0 cost-summary-metric">
               <div className="display-6 text-muted">${totalGross.toFixed(2)}</div>
               <div className="text-muted small">Gross Cost</div>
             </Col>
-            <Col md={4} className="text-center mb-3 mb-md-0">
+            <Col xs="auto" md={4} className="text-center mb-3 mb-md-0 cost-summary-metric">
               <div className="display-6 text-success">${totalNet.toFixed(2)}</div>
               <div className="text-muted small">Net Cost</div>
             </Col>
-            <Col md={4} className="text-center">
+            <Col xs="auto" md={4} className="text-center cost-summary-metric">
               <div className="display-6" style={{ color: 'var(--accent-primary)' }}>
                 ${savings.toFixed(2)}
               </div>

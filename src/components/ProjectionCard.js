@@ -116,7 +116,7 @@ const ProjectionCard = ({
         )}
 
         {/* Compact Inline Stats - 3 columns for Copilot, 3 for Actions */}
-        <div className="compact-stats-grid-combined">
+        <div className="compact-stats-grid-combined projection-stats-grid">
           {/* Copilot Stats */}
           <div className="compact-stat-item">
             <span className="compact-stat-label">

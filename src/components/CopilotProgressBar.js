@@ -164,10 +164,12 @@ const CopilotProgressBar = ({ currentUsage, quota = 1500 }) => {
           </div>
         </div>
         {/* Legend */}
-        <div className="d-flex justify-content-between mt-1" style={{ fontSize: isMobile ? '0.7rem' : '0.75rem', color: 'var(--text-secondary)' }}>
-          <span>0%</span>
-          <span>100%</span>
-        </div>
+        {!isMobile && (
+          <div className="d-flex justify-content-between mt-1" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+            <span>0%</span>
+            <span>100%</span>
+          </div>
+        )}
       </Card.Body>
     </Card>
   );

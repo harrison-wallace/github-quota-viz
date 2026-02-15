@@ -535,30 +535,49 @@ a:hover {
 }
 
 /* Compact Stats Grid (inline display) */
-.compact-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+@media (min-width: 900px) {
+  .compact-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .compact-stats-grid-combined {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .compact-stats-grid-combined {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
 }
 
 /* Combined Stats Grid (3 columns for copilot + 3 for actions) */
-.compact-stats-grid-combined {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+.projection-stats-grid {
+  width: 100%;
 }
 
 .compact-stat-item {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  padding: 0.5rem 0.75rem;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.9rem;
+  min-height: 92px;
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border-radius: 10px;
   transition: all 0.2s ease;
+  text-align: center;
 }
 
 .compact-stat-item:hover {
@@ -570,12 +589,17 @@ a:hover {
   font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: center;
 }
 
 .compact-stat-value {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.2;
 }
 
 /* Compact Stat Boxes */
@@ -658,6 +682,12 @@ a:hover {
   font-weight: 600;
 }
 
+.compact-model-table tfoot,
+.compact-model-table tfoot td,
+.compact-model-table tfoot strong {
+  color: var(--text-primary) !important;
+}
+
 .model-name-cell {
   position: relative;
   display: flex;
@@ -684,6 +714,29 @@ a:hover {
 /* Progress Bar Card */
 .progress-bar-card .card-body {
   padding: 0.75rem 1rem !important;
+}
+
+.cost-summary-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+}
+
+.cost-summary-row .cost-summary-metric {
+  flex: 1 1 160px;
+  max-width: 220px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.cost-summary-row .cost-summary-metric .display-6 {
+  font-size: 2rem;
 }
 
 /* Responsive: Stack at 1200px */
@@ -1857,7 +1910,7 @@ a:hover {
 .navbar-compact {
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1.5rem;
   box-shadow: var(--shadow-sm);
   position: relative;
   z-index: 100;
@@ -1924,13 +1977,13 @@ a:hover {
 }
 
 .navbar-btn {
-  padding: 0.5rem 0.75rem !important;
+  padding: 0.35rem 0.5rem !important;
   border-radius: 6px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 0.35rem !important;
-  font-size: 0.9rem !important;
+  font-size: 0.85rem !important;
   transition: all 0.2s ease !important;
   flex-shrink: 0;
 }
@@ -1955,12 +2008,12 @@ a:hover {
 }
 
 .navbar-dropdown .btn {
-  padding: 0.5rem 0.75rem !important;
+  padding: 0.35rem 0.5rem !important;
   border-radius: 6px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 0.9rem !important;
+  font-size: 0.85rem !important;
   transition: all 0.2s ease !important;
 }
 
