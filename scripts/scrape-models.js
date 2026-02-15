@@ -227,13 +227,24 @@ async function scrapeModels() {
         const statusIndex = headers.indexOf('release status');
 
         $(table).find('tbody tr').each((i, row) => {
-          const cells = $(row).find('td');
+          // Get all cells including th (first column is <th scope="row">)
+          const cells = $(row).find('td, th');
           if (cells.length >= 2) {
             const modelName = $(cells[modelNameIndex]).text().trim();
             const provider = $(cells[providerIndex]).text().trim();
             const status = statusIndex >= 0 ? $(cells[statusIndex]).text().trim() : 'GA';
 
-            if (modelName && provider) {
+            // Validate: model name shouldn't be a provider name, and provider shouldn't be a status
+            const providerNames = ['OpenAI', 'Anthropic', 'Google', 'xAI', 'Azure OpenAI'];
+            const statusValues = ['GA', 'Public preview', 'Closing down'];
+            
+            // Skip if data looks wrong (provider in name field, etc.)
+            if (providerNames.includes(modelName) || statusValues.some(s => provider.includes(s))) {
+              console.warn(`Skipping invalid row: name="${modelName}", provider="${provider}"`);
+              return;
+            }
+
+            if (modelName && provider && modelName !== provider) {
               // Try to find multiplier info in the page text near this model
               // For now, we'll use the fallback multipliers
               const fallbackModel = FALLBACK_MODELS.models.find(m => m.name === modelName);
@@ -256,13 +267,34 @@ async function scrapeModels() {
       return FALLBACK_MODELS;
     }
 
-    console.log(`Successfully scraped ${models.length} models`);
+    // Validate scraped data quality
+    const validModels = models.filter(m => {
+      // Check if model name looks valid (shouldn't be just a provider name)
+      const providerNames = ['OpenAI', 'Anthropic', 'Google', 'xAI', 'Azure OpenAI'];
+      if (providerNames.includes(m.name)) {
+        console.warn(`Invalid model name detected: "${m.name}" - skipping`);
+        return false;
+      }
+      // Must have name and provider
+      return m.name && m.provider && m.name.length > 0 && m.provider.length > 0;
+    });
+
+    if (validModels.length === 0) {
+      console.warn('No valid models after filtering, using fallback data');
+      return FALLBACK_MODELS;
+    }
+
+    if (validModels.length < models.length) {
+      console.warn(`Filtered out ${models.length - validModels.length} invalid model entries`);
+    }
+
+    console.log(`Successfully scraped ${validModels.length} valid models`);
     
     return {
       lastUpdated: new Date().toISOString(),
       source: 'scraped',
       url: DOCS_URL,
-      models: models
+      models: validModels
     };
 
   } catch (error) {
