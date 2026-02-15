@@ -168,7 +168,9 @@ a:hover {
 }
 
 .container-fluid {
-  max-width: 1400px;
+  max-width: 1600px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
 /* Header Styling */
@@ -503,6 +505,275 @@ a:hover {
 
 .btn:active:not(:disabled) {
   transform: translateY(0);
+}
+
+/* ============================================
+   Compact Layout Components
+   ============================================ */
+
+/* Compact Card Headers */
+.compact-header {
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+  padding: 0.75rem 1rem !important;
+  background-color: var(--bg-card) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+}
+
+.compact-body {
+  padding: 1rem !important;
+}
+
+/* Compact Projection Card */
+.compact-projection-card .compact-alert {
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
+.compact-projection-card .compact-alert strong {
+  font-size: 0.8125rem;
+}
+
+/* Compact Stats Grid (inline display) */
+.compact-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+/* Combined Stats Grid (3 columns for copilot + 3 for actions) */
+.compact-stats-grid-combined {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.compact-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.compact-stat-item:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.compact-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.compact-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Compact Stat Boxes */
+.compact-stat-box {
+  padding: 0.75rem !important;
+  min-height: auto !important;
+}
+
+.compact-stat-box .stat-label {
+  font-size: 0.75rem !important;
+  margin-bottom: 0.375rem !important;
+}
+
+.compact-stat-box .stat-value {
+  font-size: 1.5rem !important;
+}
+
+/* Model Breakdown Table */
+.model-breakdown-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.model-breakdown-card .card-body {
+  padding: 0 !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.model-breakdown-card .compact-model-table {
+  flex: 1;
+}
+
+.compact-model-table {
+  margin-bottom: 0 !important;
+  font-size: 0.8125rem;
+}
+
+.compact-model-table thead th {
+  font-size: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-elevated);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.compact-model-table tbody td {
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+}
+
+.compact-model-table tfoot td {
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-elevated);
+  font-weight: 600;
+}
+
+.model-name-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.model-color-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  border-radius: 2px;
+  z-index: 0;
+}
+
+.model-name {
+  position: relative;
+  z-index: 1;
+  padding-left: 0.5rem;
+  font-weight: 500;
+}
+
+/* Progress Bar Card */
+.progress-bar-card .card-body {
+  padding: 0.75rem 1rem !important;
+}
+
+/* Copilot Stats Card */
+.copilot-stats-card .compact-body {
+  padding: 1rem !important;
+}
+
+/* Responsive: Stack at 1200px */
+@media (max-width: 1199px) {
+  .compact-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .compact-stats-grid-combined {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .compact-stat-item {
+    padding: 0.5rem;
+  }
+  
+  .compact-stat-label {
+    font-size: 0.7rem;
+  }
+  
+  .compact-stat-value {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .compact-header {
+    font-size: 0.875rem !important;
+    padding: 0.625rem 0.75rem !important;
+  }
+  
+  .compact-body {
+    padding: 0.75rem !important;
+  }
+  
+  .compact-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .compact-stats-grid-combined {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .compact-stat-box {
+    padding: 0.625rem !important;
+  }
+  
+  .compact-stat-box .stat-value {
+    font-size: 1.25rem !important;
+  }
+  
+  .compact-model-table {
+    font-size: 0.75rem;
+  }
+  
+  .compact-model-table thead th,
+  .compact-model-table tbody td,
+  .compact-model-table tfoot td {
+    padding: 0.4rem 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .compact-header {
+    font-size: 0.8125rem !important;
+    padding: 0.5rem 0.625rem !important;
+  }
+  
+  .compact-body {
+    padding: 0.625rem !important;
+  }
+  
+  .compact-stats-grid,
+  .compact-stats-grid-combined {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+  
+  .compact-stat-box {
+    padding: 0.5rem !important;
+  }
+  
+  .compact-stat-box .stat-label {
+    font-size: 0.65rem !important;
+  }
+  
+  .compact-stat-box .stat-value {
+    font-size: 1.1rem !important;
+  }
+  
+  .compact-model-table {
+    font-size: 0.7rem;
+  }
+  
+  .compact-model-table thead th,
+  .compact-model-table tbody td,
+  .compact-model-table tfoot td {
+    padding: 0.35rem 0.4rem;
+  }
+  
+  .model-name {
+    padding-left: 0.35rem;
+    font-size: 0.7rem;
+  }
 }
 
 .btn-primary {
@@ -1101,6 +1372,14 @@ a:hover {
   
   .usage-card {
     margin-bottom: 1rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .container-fluid {
+    max-width: 1600px;
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
 }
 
