@@ -252,7 +252,7 @@ const AvailableModelsCard = ({ className = '' }) => {
 
           {/* Legend */}
           <div className="mt-3 pt-3 border-top">
-            <small className="text-muted">
+            <small className="text-muted" style={{ fontSize: '0.7rem' }}>
               <strong>Legend:</strong>{' '}
               <Badge bg="success" className="me-1">GA</Badge> Generally Available{' '}
               <Badge bg="warning" className="me-1 ms-2">Preview</Badge> Public Preview{' '}
