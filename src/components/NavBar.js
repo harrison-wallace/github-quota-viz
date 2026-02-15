@@ -223,6 +223,7 @@ function NavBar({
                 variant="outline-secondary"
                 title={<><FaUser /> {activeProfile?.name || 'Profile'}</>}
                 id="mobile-profile-dropdown"
+                onClick={(event) => event.stopPropagation()}
               >
                 {profiles.map(profile => (
                   <Dropdown.Item
