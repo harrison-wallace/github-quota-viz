@@ -66,17 +66,15 @@ const ProjectionCard = ({
         )}
 
         {!copilotWillExceed && (
-          <Alert variant="success" className="mb-2 py-2 px-2 compact-alert">
-            <div className="d-flex align-items-center">
-              <FaCheckCircle className="me-2" style={{ fontSize: '0.875rem' }} />
-              <div>
-                <strong style={{ fontSize: '0.8125rem' }}>Copilot On Track</strong>
-                <div style={{ fontSize: '0.75rem' }}>
-                  <strong>{copilotHeadroom.toFixed(0)}</strong> requests remaining
-                </div>
-              </div>
+        <Alert variant="success" className="mb-2 py-2 px-2 compact-alert">
+          <div className="d-flex align-items-center">
+            <FaCheckCircle className="me-2" style={{ fontSize: '0.875rem' }} />
+            <div style={{ fontSize: '0.85rem', display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+              <strong style={{ fontSize: '0.8125rem' }}>Copilot On Track</strong>
+              <span style={{ whiteSpace: 'nowrap' }}>{copilotHeadroom.toFixed(0)} requests remaining</span>
             </div>
-          </Alert>
+          </div>
+        </Alert>
         )}
 
         {/* Copilot Projected Usage Progress Bar */}
@@ -86,14 +84,25 @@ const ProjectionCard = ({
               <FaRobot className="me-1" style={{ fontSize: '0.75rem' }} />
               Copilot Projected EOM
             </span>
-            <span className="badge bg-secondary" style={{ fontSize: '0.75rem' }}>{copilotPercentage.toFixed(1)}%</span>
           </div>
-          <ProgressBar
-            now={Math.min(copilotPercentage, 100)}
-            variant={copilotPercentage <= 75 ? 'success' : copilotPercentage <= 90 ? 'warning' : 'danger'}
-            style={{ height: '24px', fontSize: '0.8125rem' }}
-            label={`${copilotProjectedTotal.toFixed(0)} / ${copilotQuota}`}
-          />
+          <div className="projection-progress">
+            <ProgressBar
+              now={Math.min(copilotPercentage, 100)}
+              variant={copilotPercentage <= 75 ? 'success' : copilotPercentage <= 90 ? 'warning' : 'danger'}
+              className="projection-progress-bar"
+              label=""
+              srOnly
+              aria-valuetext={`${copilotProjectedTotal.toFixed(0)} of ${copilotQuota}`}
+            />
+            <div className="projection-progress-overlay">
+              <span className="projection-progress-usage">
+                {copilotProjectedTotal.toFixed(0)} / {copilotQuota}
+              </span>
+              <span className="projection-progress-percent">
+                {copilotPercentage.toFixed(1)}%
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Actions Projected Usage Progress Bar */}
@@ -104,14 +113,25 @@ const ProjectionCard = ({
                 <FaTerminal className="me-1" style={{ fontSize: '0.75rem' }} />
                 Actions Projected EOM
               </span>
-              <span className="badge bg-secondary" style={{ fontSize: '0.75rem' }}>{actionsProjection.percentageOfQuota.toFixed(1)}%</span>
             </div>
-            <ProgressBar
-              now={Math.min(actionsProjection.percentageOfQuota, 100)}
-              variant={actionsProjection.percentageOfQuota <= 75 ? 'success' : actionsProjection.percentageOfQuota <= 90 ? 'warning' : 'danger'}
-              style={{ height: '24px', fontSize: '0.8125rem' }}
-              label={`${actionsProjection.projectedTotal.toFixed(0)} / ${actionsQuota}`}
-            />
+            <div className="projection-progress">
+              <ProgressBar
+                now={Math.min(actionsProjection.percentageOfQuota, 100)}
+                variant={actionsProjection.percentageOfQuota <= 75 ? 'success' : actionsProjection.percentageOfQuota <= 90 ? 'warning' : 'danger'}
+                className="projection-progress-bar"
+                label=""
+                srOnly
+                aria-valuetext={`${actionsProjection.projectedTotal.toFixed(0)} of ${actionsQuota}`}
+              />
+              <div className="projection-progress-overlay">
+                <span className="projection-progress-usage">
+                  {actionsProjection.projectedTotal.toFixed(0)} / {actionsQuota}
+                </span>
+                <span className="projection-progress-percent">
+                  {actionsProjection.percentageOfQuota.toFixed(1)}%
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
