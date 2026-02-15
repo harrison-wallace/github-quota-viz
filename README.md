@@ -2,7 +2,21 @@
 
 A production-ready, self-hosted React application for visualizing GitHub Actions and Copilot Premium Request usage for individual users. Features real-time usage tracking, cost breakdowns, and multiple theme options.
 
-![GitHub Usage Dashboard](https://img.shields.io/badge/React-18-blue) ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-purple) ![Docker](https://img.shields.io/badge/Docker-Ready-green)
+![GitHub Usage Dashboard](https://img.shields.io/badge/React-19-blue) ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-purple) ![Docker](https://img.shields.io/badge/Docker-Ready-green)
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/gh-usage-1.png" alt="Dashboard Overview" width="800"/>
+</p>
+
+<p align="center">
+  <img src="docs/gh-usage-2.png" alt="Available Models" width="800"/>
+</p>
+
+<p align="center">
+  <img src="docs/gh-usage-3.png" alt="Cost Breakdown" width="800"/>
+</p>
 
 ## Features
 
