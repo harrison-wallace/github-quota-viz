@@ -1,160 +1,212 @@
 import React, { useMemo } from 'react';
-import { Card, Row, Col, ProgressBar, Alert } from 'react-bootstrap';
-import { FaChartLine, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa';
+import { Card, ProgressBar, Alert } from 'react-bootstrap';
+import { FaChartLine, FaExclamationTriangle, FaCheckCircle, FaRobot, FaTerminal } from 'react-icons/fa';
 import { calculateBurnRate, projectEndOfMonthUsage, getDaysRemainingInMonth } from '../services/historicalDataService';
 
-const ProjectionCard = ({ profileId, metric = 'copilot', currentUsage, quota = 1500, title = 'Projection' }) => {
-  const burnRateData = useMemo(() => {
-    return calculateBurnRate(profileId, metric, 7);
-  }, [profileId, metric]);
+const ProjectionCard = ({ 
+  profileId, 
+  copilotUsage, 
+  copilotQuota = 1500,
+  actionsUsage,
+  actionsQuota = 3000,
+  title = 'Usage Projection',
+  className = ''
+}) => {
+  const copilotBurnRate = useMemo(() => {
+    return calculateBurnRate(profileId, 'copilot', 7);
+  }, [profileId]);
 
-  const projection = useMemo(() => {
-    if (!burnRateData) return null;
-    return projectEndOfMonthUsage(currentUsage, burnRateData.dailyRate, quota);
-  }, [burnRateData, currentUsage, quota]);
+  const actionsBurnRate = useMemo(() => {
+    return calculateBurnRate(profileId, 'actions', 7);
+  }, [profileId]);
+
+  const copilotProjection = useMemo(() => {
+    if (!copilotBurnRate) return null;
+    return projectEndOfMonthUsage(copilotUsage, copilotBurnRate.dailyRate, copilotQuota);
+  }, [copilotBurnRate, copilotUsage, copilotQuota]);
+
+  const actionsProjection = useMemo(() => {
+    if (!actionsBurnRate) return null;
+    return projectEndOfMonthUsage(actionsUsage, actionsBurnRate.dailyRate, actionsQuota);
+  }, [actionsBurnRate, actionsUsage, actionsQuota]);
 
   const daysRemaining = getDaysRemainingInMonth();
 
-  if (!projection || !burnRateData) {
+  if (!copilotProjection || !copilotBurnRate) {
     return null;
   }
 
   const {
-    projectedAdditionalUsage,
-    projectedTotal,
-    percentageOfQuota,
-    willExceedQuota,
-    usageHeadroom
-  } = projection;
-
-  const burnRatePercentPerDay = (burnRateData.dailyRate / quota) * 100;
+    projectedAdditionalUsage: copilotProjectedAdd,
+    projectedTotal: copilotProjectedTotal,
+    percentageOfQuota: copilotPercentage,
+    willExceedQuota: copilotWillExceed,
+    usageHeadroom: copilotHeadroom
+  } = copilotProjection;
 
   return (
-    <Card className="usage-card projection-card">
-      <Card.Header as="h5">
+    <Card className={`usage-card projection-card compact-projection-card h-100 ${className}`}>
+      <Card.Header as="h6" className="compact-header">
         <FaChartLine className="me-2" />
         {title}
       </Card.Header>
-      <Card.Body>
-        {/* Alert if exceeding quota */}
-        {willExceedQuota && (
-          <Alert variant="danger" className="mb-3">
-            <Alert.Heading as="h6">
-              <FaExclamationTriangle className="me-2" />
-              Projected Overage
-            </Alert.Heading>
-            <small>
-              Based on current usage patterns, you will exceed your quota by{' '}
-              <strong>{(projectedTotal - quota).toFixed(0)}</strong> requests.
-            </small>
+      <Card.Body className="compact-body">
+        {/* Copilot Alert */}
+        {copilotWillExceed && (
+          <Alert variant="danger" className="mb-2 py-2 px-2 compact-alert">
+            <div className="d-flex align-items-center">
+              <FaExclamationTriangle className="me-2" style={{ fontSize: '0.875rem' }} />
+              <div>
+                <strong style={{ fontSize: '0.8125rem' }}>Copilot Projected Overage</strong>
+                <div style={{ fontSize: '0.75rem' }}>
+                  Will exceed quota by <strong>{(copilotProjectedTotal - copilotQuota).toFixed(0)}</strong> requests
+                </div>
+              </div>
+            </div>
           </Alert>
         )}
 
-        {!willExceedQuota && (
-          <Alert variant="success" className="mb-3">
-            <Alert.Heading as="h6">
-              <FaCheckCircle className="me-2" />
-              On Track
-            </Alert.Heading>
-            <small>
-              Based on current usage patterns, you will finish the month with{' '}
-              <strong>{usageHeadroom.toFixed(0)}</strong> requests remaining.
-            </small>
-          </Alert>
-        )}
-
-        {/* Projection Stats */}
-        <Row className="g-3 mb-4">
-          <Col md={6}>
-            <div className="stat-box">
-              <div className="stat-label">Current Usage</div>
-              <div className="stat-value" style={{ color: 'var(--accent-primary)' }}>
-                {currentUsage.toFixed(0)}
-              </div>
-              <div className="stat-meta">
-                {((currentUsage / quota) * 100).toFixed(1)}% of quota
-              </div>
+        {!copilotWillExceed && (
+        <Alert variant="success" className="mb-2 py-2 px-2 compact-alert">
+          <div className="d-flex align-items-center">
+            <FaCheckCircle className="me-2" style={{ fontSize: '0.875rem' }} />
+            <div style={{ fontSize: '0.85rem', display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+              <strong style={{ fontSize: '0.8125rem' }}>Copilot On Track</strong>
+              <span style={{ whiteSpace: 'nowrap' }}>{copilotHeadroom.toFixed(0)} requests remaining</span>
             </div>
-          </Col>
-          <Col md={6}>
-            <div className="stat-box">
-              <div className="stat-label">Burn Rate (7-day avg)</div>
-              <div className="stat-value" style={{ color: 'var(--accent-warning)' }}>
-                {burnRateData.dailyRate.toFixed(1)}/day
-              </div>
-              <div className="stat-meta">
-                {burnRatePercentPerDay.toFixed(2)}% of quota per day
-              </div>
-            </div>
-          </Col>
-        </Row>
-
-        {/* Projected Usage */}
-        <div className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <span className="fw-bold">Projected End-of-Month Usage</span>
-            <span className="badge bg-secondary">{percentageOfQuota.toFixed(1)}%</span>
           </div>
-          <ProgressBar
-            now={Math.min(percentageOfQuota, 100)}
-            variant={percentageOfQuota <= 75 ? 'success' : percentageOfQuota <= 90 ? 'warning' : 'danger'}
-            style={{ height: '28px' }}
-            label={`${projectedTotal.toFixed(0)} / ${quota}`}
-          />
+        </Alert>
+        )}
+
+        {/* Copilot Projected Usage Progress Bar */}
+        <div className="mb-3">
+          <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8125rem' }}>
+            <span className="fw-bold">
+              <FaRobot className="me-1" style={{ fontSize: '0.75rem' }} />
+              Copilot Projected EOM
+            </span>
+          </div>
+          <div className="projection-progress">
+            <ProgressBar
+              now={Math.min(copilotPercentage, 100)}
+              variant={copilotPercentage <= 75 ? 'success' : copilotPercentage <= 90 ? 'warning' : 'danger'}
+              className="projection-progress-bar"
+              label="Copilot projected end-of-month usage"
+              srOnly
+              aria-valuetext={`${copilotProjectedTotal.toFixed(0)} of ${copilotQuota}`}
+            />
+            <div className="projection-progress-overlay">
+              <span className="projection-progress-usage">
+                {copilotProjectedTotal.toFixed(0)} / {copilotQuota}
+              </span>
+              <span className="projection-progress-percent">
+                {copilotPercentage.toFixed(1)}%
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Breakdown */}
-        <Row className="g-3">
-          <Col xs={6}>
-            <div className="projection-stat">
-              <div className="projection-label">Additional Usage</div>
-              <div className="projection-value">
-                {projectedAdditionalUsage.toFixed(0)}
+        {/* Actions Projected Usage Progress Bar */}
+        {actionsProjection && actionsBurnRate && (
+          <div className="mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8125rem' }}>
+              <span className="fw-bold">
+                <FaTerminal className="me-1" style={{ fontSize: '0.75rem' }} />
+                Actions Projected EOM
+              </span>
+            </div>
+            <div className="projection-progress">
+              <ProgressBar
+                now={Math.min(actionsProjection.percentageOfQuota, 100)}
+                variant={actionsProjection.percentageOfQuota <= 75 ? 'success' : actionsProjection.percentageOfQuota <= 90 ? 'warning' : 'danger'}
+                className="projection-progress-bar"
+                label=""
+                srOnly
+                aria-valuetext={`${actionsProjection.projectedTotal.toFixed(0)} of ${actionsQuota}`}
+              />
+              <div className="projection-progress-overlay">
+                <span className="projection-progress-usage">
+                  {actionsProjection.projectedTotal.toFixed(0)} / {actionsQuota}
+                </span>
+                <span className="projection-progress-percent">
+                  {actionsProjection.percentageOfQuota.toFixed(1)}%
+                </span>
               </div>
             </div>
-          </Col>
-          <Col xs={6}>
-            <div className="projection-stat">
-              <div className="projection-label">Days Remaining</div>
-              <div className="projection-value">
-                {daysRemaining}
-              </div>
-            </div>
-          </Col>
-        </Row>
+          </div>
+        )}
 
-        {/* Details Table */}
-        <div className="mt-4 pt-3 border-top">
-          <table className="w-100" style={{ fontSize: '0.875rem' }}>
-            <tbody>
-              <tr>
-                <td className="text-muted">Current</td>
-                <td className="text-end fw-bold">{currentUsage.toFixed(0)}</td>
-              </tr>
-              <tr>
-                <td className="text-muted">Projected to add</td>
-                <td className="text-end fw-bold">{projectedAdditionalUsage.toFixed(0)}</td>
-              </tr>
-              <tr style={{ borderTop: '1px solid var(--border-color)' }} className="fw-bold">
-                <td>Projected Total</td>
-                <td className="text-end">{projectedTotal.toFixed(0)}</td>
-              </tr>
-              <tr className="text-muted">
-                <td>Quota</td>
-                <td className="text-end">{quota}</td>
-              </tr>
-              <tr 
-                style={{ 
-                  borderTop: '1px solid var(--border-color)',
-                  color: usageHeadroom > 0 ? 'var(--accent-success)' : 'var(--accent-danger)'
-                }}
-                className="fw-bold"
-              >
-                <td>{usageHeadroom > 0 ? 'Headroom' : 'Overage'}</td>
-                <td className="text-end">{Math.abs(usageHeadroom).toFixed(0)}</td>
-              </tr>
-            </tbody>
-          </table>
+        {/* Compact Inline Stats - 3 columns for Copilot, 3 for Actions */}
+        <div className="compact-stats-grid-combined projection-stats-grid">
+          {/* Copilot Stats */}
+          <div className="compact-stat-item">
+            <span className="compact-stat-label">
+              <FaRobot className="me-1" style={{ fontSize: '0.65rem' }} />
+              Copilot Current
+            </span>
+            <span className="compact-stat-value" style={{ color: 'var(--accent-primary)' }}>
+              {copilotUsage.toFixed(0)}
+            </span>
+          </div>
+          <div className="compact-stat-item">
+            <span className="compact-stat-label">
+              <FaRobot className="me-1" style={{ fontSize: '0.65rem' }} />
+              Projected +
+            </span>
+            <span className="compact-stat-value" style={{ color: 'var(--text-primary)' }}>
+              {copilotProjectedAdd.toFixed(0)}
+            </span>
+          </div>
+          <div className="compact-stat-item">
+            <span className="compact-stat-label">
+              <FaRobot className="me-1" style={{ fontSize: '0.65rem' }} />
+              Burn Rate
+            </span>
+            <span className="compact-stat-value" style={{ color: 'var(--accent-warning)' }}>
+              {copilotBurnRate.dailyRate.toFixed(1)}/d
+            </span>
+          </div>
+          
+          {/* Actions Stats */}
+          {actionsProjection && actionsBurnRate && (
+            <>
+              <div className="compact-stat-item">
+                <span className="compact-stat-label">
+                  <FaTerminal className="me-1" style={{ fontSize: '0.65rem' }} />
+                  Actions Current
+                </span>
+                <span className="compact-stat-value" style={{ color: 'var(--accent-info)' }}>
+                  {actionsUsage.toFixed(0)}
+                </span>
+              </div>
+              <div className="compact-stat-item">
+                <span className="compact-stat-label">
+                  <FaTerminal className="me-1" style={{ fontSize: '0.65rem' }} />
+                  Projected +
+                </span>
+                <span className="compact-stat-value" style={{ color: 'var(--text-primary)' }}>
+                  {actionsProjection.projectedAdditionalUsage.toFixed(0)}
+                </span>
+              </div>
+              <div className="compact-stat-item">
+                <span className="compact-stat-label">
+                  <FaTerminal className="me-1" style={{ fontSize: '0.65rem' }} />
+                  Burn Rate
+                </span>
+                <span className="compact-stat-value" style={{ color: 'var(--accent-warning)' }}>
+                  {actionsBurnRate.dailyRate.toFixed(1)}/d
+                </span>
+              </div>
+            </>
+          )}
+          
+          {/* Days Remaining - Spans full width */}
+          <div className="compact-stat-item" style={{ gridColumn: actionsProjection ? 'span 3' : 'span 2' }}>
+            <span className="compact-stat-label">Days Left in Month</span>
+            <span className="compact-stat-value" style={{ color: 'var(--text-secondary)' }}>
+              {daysRemaining}
+            </span>
+          </div>
         </div>
       </Card.Body>
     </Card>

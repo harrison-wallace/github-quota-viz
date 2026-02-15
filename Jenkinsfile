@@ -16,16 +16,22 @@ pipeline {
         stage('Cleanup') {
             steps {
                 echo 'Cleaning up previous builds...'
-                sh '''
-                    # Remove old container if exists
-                    docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
+                script {
+                    // Only remove container and image on main branch builds
+                    // PR builds should not touch production deployment
+                    if (env.BRANCH_NAME == 'main') {
+                        sh '''
+                            # Remove old container if exists
+                            docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
+                            
+                            # Remove old image if exists
+                            docker rmi -f ${IMAGE_NAME} 2>/dev/null || true
+                        '''
+                    }
                     
-                    # Remove old image if exists
-                    docker rmi -f ${IMAGE_NAME} 2>/dev/null || true
-                    
-                    # Clean npm cache and node_modules
-                    rm -rf node_modules build
-                '''
+                    // Always clean build artifacts
+                    sh 'rm -rf node_modules build'
+                }
             }
         }
         
@@ -71,6 +77,9 @@ pipeline {
         }
         
         stage('Deploy Container') {
+            when {
+                branch 'main'
+            }
             steps {
                 echo 'Deploying Docker container...'
                 script {
@@ -89,6 +98,9 @@ pipeline {
         }
         
         stage('Verify Deployment') {
+            when {
+                branch 'main'
+            }
             steps {
                 echo 'Verifying container is running...'
                 sh '''
@@ -110,22 +122,34 @@ pipeline {
     
     post {
         success {
-            echo "Deployment successful!"
-            echo "Access the dashboard at: http://localhost:${params.PORT}"
-            echo "Container name: ${params.CONTAINER_NAME}"
+            script {
+                if (env.BRANCH_NAME == 'main') {
+                    echo "Deployment successful!"
+                    echo "Access the dashboard at: http://localhost:${params.PORT}"
+                    echo "Container name: ${params.CONTAINER_NAME}"
+                } else {
+                    echo "Build and tests successful! (PR build - no deployment)"
+                }
+            }
         }
-        
+
         failure {
-            echo 'Deployment failed!'
-            sh '''
-                # Show container logs if available
-                docker logs ${CONTAINER_NAME} 2>/dev/null || true
-                
-                # Cleanup failed container
-                docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
-            '''
+            script {
+                if (env.BRANCH_NAME == 'main') {
+                    echo 'Deployment failed!'
+                    sh '''
+                        # Show container logs if available
+                        docker logs ${CONTAINER_NAME} 2>/dev/null || true
+
+                        # Cleanup failed container
+                        docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
+                    '''
+                } else {
+                    echo 'Build failed! (PR build)'
+                }
+            }
         }
-        
+
         always {
             echo 'Pipeline completed.'
         }

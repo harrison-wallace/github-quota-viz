@@ -14,8 +14,6 @@ Jenkinsfile
 .dockerignore
 src
 public
-package.json
-package-lock.json
 .vscode
 .idea
 docker-entrypoint.sh

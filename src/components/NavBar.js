@@ -218,12 +218,12 @@ function NavBar({
           </div>
 
           <div className="mobile-menu-item">
-            {profiles.length > 1 && (
+            {profiles.length > 0 ? (
               <DropdownButton
                 variant="outline-secondary"
                 title={<><FaUser /> {activeProfile?.name || 'Profile'}</>}
                 id="mobile-profile-dropdown"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => event.stopPropagation()}
               >
                 {profiles.map(profile => (
                   <Dropdown.Item
@@ -245,6 +245,16 @@ function NavBar({
                   + Add/Manage Profiles
                 </Dropdown.Item>
               </DropdownButton>
+            ) : (
+              <Button
+                variant="outline-secondary"
+                onClick={() => {
+                  onShowProfileModal();
+                  closeMobileMenu();
+                }}
+              >
+                <FaUser /> Add Profile
+              </Button>
             )}
           </div>
         </div>

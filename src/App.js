@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Alert, Button } from 'react-bootstrap';
 import { FaGithub, FaUser } from 'react-icons/fa';
-import ActionsUsageCard from './components/ActionsUsageCard';
-import CopilotUsageCard from './components/CopilotUsageCard';
+import CopilotProgressBar from './components/CopilotProgressBar';
+import ModelBreakdownTable from './components/ModelBreakdownTable';
 import CostSummaryCard from './components/CostSummaryCard';
+import AvailableModelsCard from './components/AvailableModelsCard';
 import ProjectionCard from './components/ProjectionCard';
 import { LoadingSkeleton } from './components/SkeletonCard';
 import ProfileModal from './components/ProfileModal';
@@ -240,43 +241,46 @@ function App() {
 
         {!loading && summaryData && (
           <>
-            {/* Copilot Projection - Top Priority */}
-            <Row className="mb-3">
-              <Col lg={8} className="mx-auto">
+            {/* Progress Bar - Full Width */}
+            <Row className="mb-2">
+              <Col>
                 <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Projection" />}
+                  placeholder={<LazyLoadCardSkeleton title="Usage Progress" />}
                   rootMargin="200px"
                 >
-                  <ProjectionCard
-                    profileId={activeProfile?.id}
-                    metric="copilot"
+                  <CopilotProgressBar
                     currentUsage={premiumData?.totalRequests || summaryData.copilot?.totalRequests || 0}
                     quota={1500}
-                    title="Copilot Projection"
                   />
                 </LazyLoadWrapper>
               </Col>
             </Row>
 
-            {/* Copilot Bar Chart - Centered */}
-            <Row className="mb-3">
-              <Col lg={8} className="mx-auto">
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Copilot Usage" />}
-                  rootMargin="200px"
-                >
-                  <CopilotUsageCard 
-                    premiumData={premiumData} 
-                    copilotData={summaryData.copilot}
-                    quota={1500}
-                  />
-                </LazyLoadWrapper>
+            {/* Top Row: Projection (60%) + Model Table (40%) - Side by side on large screens */}
+            <Row className="mb-2 g-2 equal-height-row">
+              <Col xl={7} lg={12} className="mb-2 mb-xl-0">
+                <ProjectionCard
+                  className="h-100"
+                  profileId={activeProfile?.id}
+                  copilotUsage={premiumData?.totalRequests || summaryData.copilot?.totalRequests || 0}
+                  copilotQuota={1500}
+                  actionsUsage={summaryData.actions?.minutes || 0}
+                  actionsQuota={3000}
+                  title="Usage Projection"
+                />
+              </Col>
+              <Col xl={5} lg={12}>
+                <ModelBreakdownTable
+                  className="h-100"
+                  premiumData={premiumData}
+                  copilotData={summaryData.copilot}
+                />
               </Col>
             </Row>
 
             {/* Cost Summary Below */}
-            <Row className="mb-3">
-              <Col lg={8} className="mx-auto">
+            <Row className="mb-2">
+              <Col>
                 <LazyLoadWrapper 
                   placeholder={<LazyLoadCardSkeleton title="Cost Summary" />}
                   rootMargin="300px"
@@ -286,35 +290,14 @@ function App() {
               </Col>
             </Row>
 
-            {/* Actions Projection */}
-            <Row className="mb-3">
-              <Col lg={8} className="mx-auto">
+            {/* Available Models Below Cost Summary */}
+            <Row className="mb-2">
+              <Col>
                 <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Actions Projection" />}
+                  placeholder={<LazyLoadCardSkeleton title="Available Models" />}
                   rootMargin="300px"
                 >
-                  <ProjectionCard
-                    profileId={activeProfile?.id}
-                    metric="actions"
-                    currentUsage={summaryData.actions?.minutes || 0}
-                    quota={3000}
-                    title="Actions Projection"
-                  />
-                </LazyLoadWrapper>
-              </Col>
-            </Row>
-
-            {/* Actions Usage */}
-            <Row className="mb-3">
-              <Col lg={8} className="mx-auto">
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Actions Usage" />}
-                  rootMargin="300px"
-                >
-                  <ActionsUsageCard 
-                    actionsData={summaryData.actions}
-                    quota={3000}
-                  />
+                  <AvailableModelsCard />
                 </LazyLoadWrapper>
               </Col>
             </Row>
