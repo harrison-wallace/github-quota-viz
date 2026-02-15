@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Alert, Button } from 'react-bootstrap';
 import { FaGithub, FaUser } from 'react-icons/fa';
-import ActionsUsageCard from './components/ActionsUsageCard';
-import CopilotUsageCard from './components/CopilotUsageCard';
 import CopilotProgressBar from './components/CopilotProgressBar';
 import ModelBreakdownTable from './components/ModelBreakdownTable';
 import CostSummaryCard from './components/CostSummaryCard';
@@ -242,9 +240,24 @@ function App() {
 
         {!loading && summaryData && (
           <>
+            {/* Progress Bar - Full Width */}
+            <Row className="mb-2">
+              <Col>
+                <LazyLoadWrapper 
+                  placeholder={<LazyLoadCardSkeleton title="Usage Progress" />}
+                  rootMargin="200px"
+                >
+                  <CopilotProgressBar
+                    currentUsage={premiumData?.totalRequests || summaryData.copilot?.totalRequests || 0}
+                    quota={1500}
+                  />
+                </LazyLoadWrapper>
+              </Col>
+            </Row>
+
             {/* Top Row: Projection (60%) + Model Table (40%) - Side by side on large screens */}
-            <Row className="mb-3 g-3">
-              <Col xl={7} lg={12}>
+            <Row className="mb-2 g-2">
+              <Col xl={7} lg={12} className="mb-2 mb-xl-0">
                 <LazyLoadWrapper 
                   placeholder={<LazyLoadCardSkeleton title="Projection" />}
                   rootMargin="200px"
@@ -272,60 +285,14 @@ function App() {
               </Col>
             </Row>
 
-            {/* Progress Bar - Full Width */}
-            <Row className="mb-3">
-              <Col>
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Usage Progress" />}
-                  rootMargin="200px"
-                >
-                  <CopilotProgressBar
-                    currentUsage={premiumData?.totalRequests || summaryData.copilot?.totalRequests || 0}
-                    quota={1500}
-                  />
-                </LazyLoadWrapper>
-              </Col>
-            </Row>
-
-            {/* Stats Grid - Full Width */}
-            <Row className="mb-3">
-              <Col>
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Copilot Usage" />}
-                  rootMargin="200px"
-                >
-                  <CopilotUsageCard 
-                    premiumData={premiumData} 
-                    copilotData={summaryData.copilot}
-                    quota={1500}
-                  />
-                </LazyLoadWrapper>
-              </Col>
-            </Row>
-
             {/* Cost Summary Below */}
-            <Row className="mb-3">
+            <Row className="mb-2">
               <Col>
                 <LazyLoadWrapper 
                   placeholder={<LazyLoadCardSkeleton title="Cost Summary" />}
                   rootMargin="300px"
                 >
                   <CostSummaryCard summaryData={summaryData} premiumData={premiumData} />
-                </LazyLoadWrapper>
-              </Col>
-            </Row>
-
-            {/* Actions Usage */}
-            <Row className="mb-3">
-              <Col lg={8} className="mx-auto">
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Actions Usage" />}
-                  rootMargin="300px"
-                >
-                  <ActionsUsageCard 
-                    actionsData={summaryData.actions}
-                    quota={3000}
-                  />
                 </LazyLoadWrapper>
               </Col>
             </Row>

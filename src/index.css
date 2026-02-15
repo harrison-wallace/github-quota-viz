@@ -604,10 +604,33 @@ a:hover {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: auto;
 }
 
 .model-breakdown-card .compact-model-table {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.model-breakdown-card .compact-model-table thead,
+.model-breakdown-card .compact-model-table tbody,
+.model-breakdown-card .compact-model-table tfoot {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.model-breakdown-card .compact-model-table tbody {
   flex: 1;
+  display: block;
+  overflow-y: auto;
+}
+
+.model-breakdown-card .compact-model-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .compact-model-table {
@@ -617,7 +640,7 @@ a:hover {
 
 .compact-model-table thead th {
   font-size: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem;
   background-color: var(--bg-elevated);
   font-weight: 600;
   text-transform: uppercase;
@@ -625,12 +648,12 @@ a:hover {
 }
 
 .compact-model-table tbody td {
-  padding: 0.5rem 0.75rem;
+  padding: 1rem 0.75rem;
   vertical-align: middle;
 }
 
 .compact-model-table tfoot td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem;
   background-color: var(--bg-elevated);
   font-weight: 600;
 }
@@ -661,11 +684,6 @@ a:hover {
 /* Progress Bar Card */
 .progress-bar-card .card-body {
   padding: 0.75rem 1rem !important;
-}
-
-/* Copilot Stats Card */
-.copilot-stats-card .compact-body {
-  padding: 1rem !important;
 }
 
 /* Responsive: Stack at 1200px */
