@@ -257,34 +257,24 @@ function App() {
             </Row>
 
             {/* Top Row: Projection (60%) + Model Table (40%) - Side by side on large screens */}
-            <Row className="mb-2 g-2">
+            <Row className="mb-2 g-2 equal-height-row">
               <Col xl={7} lg={12} className="mb-2 mb-xl-0">
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Projection" />}
-                  rootMargin="200px"
-                >
-                  <ProjectionCard
-                    className="h-100"
-                    profileId={activeProfile?.id}
-                    copilotUsage={premiumData?.totalRequests || summaryData.copilot?.totalRequests || 0}
-                    copilotQuota={1500}
-                    actionsUsage={summaryData.actions?.minutes || 0}
-                    actionsQuota={3000}
-                    title="Usage Projection"
-                  />
-                </LazyLoadWrapper>
+                <ProjectionCard
+                  className="h-100"
+                  profileId={activeProfile?.id}
+                  copilotUsage={premiumData?.totalRequests || summaryData.copilot?.totalRequests || 0}
+                  copilotQuota={1500}
+                  actionsUsage={summaryData.actions?.minutes || 0}
+                  actionsQuota={3000}
+                  title="Usage Projection"
+                />
               </Col>
               <Col xl={5} lg={12}>
-                <LazyLoadWrapper 
-                  placeholder={<LazyLoadCardSkeleton title="Models Used" />}
-                  rootMargin="200px"
-                >
-                  <ModelBreakdownTable
-                    className="h-100"
-                    premiumData={premiumData}
-                    copilotData={summaryData.copilot}
-                  />
-                </LazyLoadWrapper>
+                <ModelBreakdownTable
+                  className="h-100"
+                  premiumData={premiumData}
+                  copilotData={summaryData.copilot}
+                />
               </Col>
             </Row>
 
