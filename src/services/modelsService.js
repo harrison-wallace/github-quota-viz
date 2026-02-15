@@ -174,7 +174,7 @@ const POLL_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 /**
  * Fetch available models from local JSON endpoint
- * Falls back to hardcoded data if fetch fails
+ * Falls back to hardcoded data if fetch fails or data is invalid
  */
 export const fetchAvailableModels = async () => {
   try {
@@ -190,6 +190,32 @@ export const fetchAvailableModels = async () => {
     }
 
     const data = await response.json();
+    
+    // Validate scraped data - check for common issues
+    if (data.models && data.models.length > 0) {
+      const firstModel = data.models[0];
+      const providerNames = ['OpenAI', 'Anthropic', 'Google', 'xAI', 'Azure OpenAI'];
+      
+      // Check if data looks corrupted (provider name in model name field)
+      if (providerNames.includes(firstModel.name)) {
+        console.warn('Scraped data appears corrupted (provider names in model field), using fallback data');
+        return {
+          ...FALLBACK_MODELS,
+          _warning: 'Using fallback data - scraped data was corrupted'
+        };
+      }
+      
+      // Check if most multipliers are null (indicates bad scrape)
+      const nullMultiplierCount = data.models.filter(m => m.multiplierPaid === null).length;
+      if (nullMultiplierCount > data.models.length * 0.8) {
+        console.warn(`Too many null multipliers (${nullMultiplierCount}/${data.models.length}), using fallback data`);
+        return {
+          ...FALLBACK_MODELS,
+          _warning: 'Using fallback data - insufficient multiplier data'
+        };
+      }
+    }
+    
     return data;
   } catch (error) {
     console.warn('Failed to fetch models from server, using fallback data:', error.message);
@@ -216,6 +242,10 @@ export const useAvailableModels = (interval = POLL_INTERVAL) => {
       const data = await fetchAvailableModels();
       setModels(data.models || []);
       setLastUpdated(data.lastUpdated ? new Date(data.lastUpdated) : null);
+      // Pass through any warning from fetch validation
+      if (data._warning) {
+        setError(data._warning);
+      }
     } catch (err) {
       console.error('Error fetching models:', err);
       setError(err.message);
