@@ -148,18 +148,6 @@ const CopilotProgressBar = ({ currentUsage, quota = 1500 }) => {
                   {percentage.toFixed(1)}%
                 </span>
               </div>
-              
-              {/* Right side: Usage count */}
-              <div style={{
-                marginLeft: 'auto',
-                fontSize: isMobile ? '0.7rem' : '0.8rem',
-                color: 'white',
-                fontWeight: 600,
-                textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                whiteSpace: 'nowrap'
-              }}>
-                {currentUsage.toFixed(0)} / {quota}
-              </div>
             </div>
           </div>
         </div>
