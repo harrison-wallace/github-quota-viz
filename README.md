@@ -97,11 +97,38 @@ Classic PATs will NOT work as they don't have the "Plan" permission option.
    The token is validated and stored securely in your browser (base64 encoded in localStorage).
 
  5. **Build for production**
+     ```bash
+     npm run build
+     ```
+
+     The build artifacts will be in the `build/` directory.
+
+ 6. **Serve locally for testing (optional)**
+
+    After building, you can serve the `build/` folder locally to test or share on your LAN:
+
+    **Option 1: Python (usually pre-installed)**
     ```bash
-    npm run build
+    cd build && python3 -m http.server 3000 --bind 0.0.0.0
+    # Access at: http://localhost:3000 or http://YOUR_IP:3000
     ```
 
-    The build artifacts will be in the `build/` directory.
+    **Option 2: Node.js (npx serve)**
+    ```bash
+    npx serve -s build -l 3000
+    # Access at: http://localhost:3000
+    ```
+
+    **Option 3: npx http-server**
+    ```bash
+    npx http-server build -p 3000 --cors
+    # Access at: http://localhost:3000
+    ```
+
+    **To find your LAN IP address:**
+    - **Linux/Mac**: Run `ip addr` or `ifconfig`
+    - **Windows**: Run `ipconfig`
+    - Then access from other devices: `http://YOUR_IP:3000`
 
 ### Docker Deployment (Manual)
 
