@@ -28,7 +28,7 @@ A production-ready, self-hosted React application for visualizing GitHub Actions
 - **Responsive Design**: Mobile-friendly interface built with Bootstrap 5
 - **Profile Management**: Add multiple GitHub profiles via secure GUI (tokens stored encrypted in browser)
 - **Dockerized Deployment**: Single-stage nginx container
-- **CI/CD Ready**: Jenkins pipeline using tinyclock deployment pattern
+- **CI/CD Ready**: Jenkins multibranch pipeline with manual tag-based deployments
 
 ## Architecture
 
@@ -39,7 +39,7 @@ A production-ready, self-hosted React application for visualizing GitHub Actions
 - **Web Scraping**: Node.js with Cheerio (for auto-updating models)
 - **Background Jobs**: Cron (inside container for daily model updates)
 - **Deployment**: Docker (nginx:alpine with multi-stage build)
-- **CI/CD**: Jenkins (declarative pipeline)
+- **CI/CD**: Jenkins (multibranch pipeline with manual tag-based deployments)
 
 ### API Endpoints Used
 1. `GET /users/{username}/settings/billing/usage/summary` - Monthly aggregated usage summary
@@ -322,6 +322,76 @@ npm install
 ```bash
 node --version  # Should be 20+
 ```
+
+## CI/CD & Deployment
+
+This project uses Jenkins with a **manual tag-based deployment** strategy following Git Flow.
+
+### Continuous Integration (Automatic)
+
+All branches and pull requests are automatically built and tested:
+
+- **Branches** (`main`, `develop`, `feature/*`, `bugfix/*`): Auto-build on every push
+- **Pull Requests**: Auto-build with full CI validation (lint, test, build)
+- **Tags**: Discovered but **NOT auto-built** (manual trigger required for deployment)
+
+Every push triggers:
+1. Branch name validation (Git Flow compliance)
+2. Dependency installation (`npm ci`)
+3. Linting (`npm run lint`)
+4. Tests (`npm test`)
+5. Production build (`npm run build`)
+6. Docker image build
+
+### Deployment (Manual)
+
+**Only tags trigger deployment.** This ensures intentional, controlled production releases.
+
+#### Release Process
+
+1. **Merge your changes to main** (via Pull Request from develop)
+   ```bash
+   # Create PR from develop to main
+   gh pr create --base main --head develop \
+     --title "Release v1.1.0" \
+     --body "Release version 1.1.0"
+   
+   # After CI passes, merge PR on GitHub UI
+   ```
+
+2. **Sync your local main branch**
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+3. **Create a semantic version tag**
+   ```bash
+   git tag -a v1.1.0 -m "Release version 1.1.0"
+   git push origin v1.1.0
+   ```
+
+4. **Manually trigger deployment in Jenkins**
+   - Navigate to your Jenkins job
+   - Find the tag in the Branches/Tags list (e.g., `v1.1.0`)
+   - Click on the tag
+   - Click **"Build Now"**
+   
+   Jenkins will then:
+   - Run full CI validation
+   - Update `package.json` version automatically
+   - Build Docker image
+   - Deploy container to production
+   - Verify deployment success
+
+#### Why Manual Trigger?
+
+- **Intentional deployments**: No accidental production releases
+- **Deployment control**: You choose when to deploy (even if tag was created earlier)
+- **Rollback capability**: Previous tags remain available for quick rollback
+- **Audit trail**: Every deployment maps to a specific version tag
+
+For detailed deployment patterns and troubleshooting, see `DEPLOYMENT_PATTERN.md` (private reference doc).
 
 ## Development
 
