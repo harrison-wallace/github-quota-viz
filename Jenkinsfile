@@ -144,9 +144,6 @@ pipeline {
                     sh '''
                         echo "Removing old container if exists..."
                         docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
-                        
-                        echo "Removing old image if exists..."
-                        docker rmi -f ${IMAGE_NAME} 2>/dev/null || true
                     '''
                     
                     def dockerCmd = "docker run -d --name ${params.CONTAINER_NAME} -p ${params.PORT}:80 --restart unless-stopped"
