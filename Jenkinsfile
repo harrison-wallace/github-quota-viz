@@ -141,10 +141,10 @@ pipeline {
                 echo 'Deploying Docker container...'
                 script {
                     // Remove old container first
-                    sh '''
+                    sh """
                         echo "Removing old container if exists..."
-                        docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
-                    '''
+                        docker rm -f ${params.CONTAINER_NAME} 2>/dev/null || true
+                    """
                     
                     def dockerCmd = "docker run -d --name ${params.CONTAINER_NAME} -p ${params.PORT}:80 --restart unless-stopped"
                     
@@ -166,19 +166,19 @@ pipeline {
             }
             steps {
                 echo 'Verifying container is running...'
-                sh '''
+                sh """
                     # Wait for container to start
                     sleep 5
                     
                     # Check container status
-                    docker ps | grep ${CONTAINER_NAME}
+                    docker ps | grep ${params.CONTAINER_NAME}
                     
                     # Check container logs
-                    docker logs ${CONTAINER_NAME}
+                    docker logs ${params.CONTAINER_NAME}
                     
                     # Test HTTP endpoint
-                    curl -f http://localhost:${PORT} || echo "Warning: HTTP check failed"
-                '''
+                    curl -f http://localhost:${params.PORT} || echo "Warning: HTTP check failed"
+                """
             }
         }
     }
@@ -204,13 +204,13 @@ pipeline {
             script {
                 if (env.TAG_NAME) {
                     echo '❌ Deployment failed!'
-                    sh '''
+                    sh """
                         # Show container logs if available
-                        docker logs ${CONTAINER_NAME} 2>/dev/null || true
+                        docker logs ${params.CONTAINER_NAME} 2>/dev/null || true
 
                         # Cleanup failed container
-                        docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
-                    '''
+                        docker rm -f ${params.CONTAINER_NAME} 2>/dev/null || true
+                    """
                 } else {
                     echo "❌ Build failed! (Branch: ${env.BRANCH_NAME})"
                 }
