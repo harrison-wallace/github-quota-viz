@@ -28,3 +28,8 @@ yarn-error.log*
 
 # Opencode
 AGENTS.md
+
+
+# Private deployment documentation
+DEPLOYMENT_PATTERN.md
+CONTRIBUTING.md
