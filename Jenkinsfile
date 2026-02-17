@@ -16,6 +16,12 @@ pipeline {
         stage('Validate Branch Name') {
             steps {
                 script {
+                    // Skip validation for tags - they are inherently valid deployment triggers
+                    if (env.TAG_NAME) {
+                        echo "🏷️ Tag '${env.TAG_NAME}' detected - skipping branch validation"
+                        return
+                    }
+                    
                     def branchName = env.BRANCH_NAME ?: 'unknown'
                     def validPattern = /^(main|develop|feature\/.*|bugfix\/.*|hotfix\/.*|release\/.*|PR-\d+)$/
                     
