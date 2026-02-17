@@ -13,25 +13,41 @@ pipeline {
     }
     
     stages {
+        stage('Validate Branch Name') {
+            steps {
+                script {
+                    def branchName = env.BRANCH_NAME ?: 'unknown'
+                    def validPattern = /^(main|develop|feature\/.*|bugfix\/.*|hotfix\/.*|release\/.*|PR-\d+)$/
+                    
+                    if (!branchName.matches(validPattern)) {
+                        error("""
+                            ❌ Branch name '${branchName}' does not follow Git Flow naming convention!
+                            
+                            Allowed patterns:
+                            - main (production)
+                            - develop (integration)
+                            - feature/* (new features)
+                            - bugfix/* (bug fixes)
+                            - hotfix/* (urgent production fixes)
+                            - release/* (release preparation)
+                            - PR-* (pull requests)
+                            
+                            Please rename your branch following these conventions.
+                        """)
+                    }
+                    
+                    echo "✅ Branch name '${branchName}' is valid"
+                }
+            }
+        }
+        
         stage('Cleanup') {
             steps {
                 echo 'Cleaning up previous builds...'
-                script {
-                    // Only remove container and image on main branch builds
-                    // PR builds should not touch production deployment
-                    if (env.BRANCH_NAME == 'main') {
-                        sh '''
-                            # Remove old container if exists
-                            docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
-                            
-                            # Remove old image if exists
-                            docker rmi -f ${IMAGE_NAME} 2>/dev/null || true
-                        '''
-                    }
-                    
-                    // Always clean build artifacts
-                    sh 'rm -rf node_modules build'
-                }
+                sh '''
+                    # Always clean build artifacts
+                    rm -rf node_modules build
+                '''
             }
         }
         
@@ -47,6 +63,20 @@ pipeline {
                     # Install dependencies
                     npm ci
                 '''
+            }
+        }
+        
+        stage('Lint') {
+            steps {
+                echo 'Running ESLint...'
+                sh 'npm run lint'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                sh 'npm test'
             }
         }
         
@@ -76,13 +106,43 @@ pipeline {
             }
         }
         
+        stage('Update Version') {
+            when {
+                tag 'v*'
+            }
+            steps {
+                echo 'Updating package.json version...'
+                script {
+                    def versionTag = env.TAG_NAME
+                    echo "Updating package.json to version ${versionTag}"
+                    
+                    sh """
+                        # Update package.json with the tag version
+                        sed -i 's/"version": ".*"/"version": "${versionTag.replace('v', '')}"/' package.json
+                        
+                        # Show the updated version
+                        cat package.json | grep '"version"'
+                    """
+                }
+            }
+        }
+        
         stage('Deploy Container') {
             when {
-                branch 'main'
+                tag 'v*'
             }
             steps {
                 echo 'Deploying Docker container...'
                 script {
+                    // Remove old container first
+                    sh '''
+                        echo "Removing old container if exists..."
+                        docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
+                        
+                        echo "Removing old image if exists..."
+                        docker rmi -f ${IMAGE_NAME} 2>/dev/null || true
+                    '''
+                    
                     def dockerCmd = "docker run -d --name ${params.CONTAINER_NAME} -p ${params.PORT}:80 --restart unless-stopped"
                     
                     // Add proxy network connection if requested
@@ -99,7 +159,7 @@ pipeline {
         
         stage('Verify Deployment') {
             when {
-                branch 'main'
+                tag 'v*'
             }
             steps {
                 echo 'Verifying container is running...'
@@ -123,20 +183,24 @@ pipeline {
     post {
         success {
             script {
-                if (env.BRANCH_NAME == 'main') {
-                    echo "Deployment successful!"
+                if (env.TAG_NAME) {
+                    echo "🚀 Deployment successful!"
+                    echo "Version: ${env.TAG_NAME}"
                     echo "Access the dashboard at: http://localhost:${params.PORT}"
                     echo "Container name: ${params.CONTAINER_NAME}"
+                } else if (env.BRANCH_NAME == 'main') {
+                    echo "✅ Build and tests successful on main branch!"
+                    echo "To deploy: create a version tag (e.g., git tag -a v1.0.0 -m 'Version 1.0.0')"
                 } else {
-                    echo "Build and tests successful! (PR build - no deployment)"
+                    echo "✅ Build and tests successful! (Branch: ${env.BRANCH_NAME})"
                 }
             }
         }
 
         failure {
             script {
-                if (env.BRANCH_NAME == 'main') {
-                    echo 'Deployment failed!'
+                if (env.TAG_NAME) {
+                    echo '❌ Deployment failed!'
                     sh '''
                         # Show container logs if available
                         docker logs ${CONTAINER_NAME} 2>/dev/null || true
@@ -145,7 +209,7 @@ pipeline {
                         docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
                     '''
                 } else {
-                    echo 'Build failed! (PR build)'
+                    echo "❌ Build failed! (Branch: ${env.BRANCH_NAME})"
                 }
             }
         }
