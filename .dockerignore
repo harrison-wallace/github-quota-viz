@@ -12,8 +12,6 @@ README.md
 README.old.md
 Jenkinsfile
 .dockerignore
-src
-public
 .vscode
 .idea
 docker-entrypoint.sh
