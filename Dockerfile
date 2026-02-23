@@ -1,52 +1,62 @@
-# Multi-stage build for Node.js scripts
+# Multi-stage build
+# Stage 1: build the React app and compile native Node addons (better-sqlite3)
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and install dependencies for scripts
+# Native build deps for better-sqlite3
+RUN apk add --no-cache python3 make g++
+
+# Install ALL dependencies (including devDeps for the React build)
 COPY package*.json ./
+RUN npm ci
+
+# Build the React app
+COPY public ./public
+COPY src ./src
+RUN npm run build
+
+# Install production-only deps for the Express server (rebuilds native modules)
 RUN npm ci --only=production
 
-# Copy scripts
-COPY scripts ./scripts
-
-# Production stage
+# ─────────────────────────────────────────────────────────────
+# Stage 2: production image
 FROM nginx:alpine
 
-# Install Node.js, cron, and other dependencies
+# Runtime deps: Node.js for the Express server + cron
 RUN apk add --no-cache \
     nodejs \
     npm \
     dcron \
     curl
 
-# Copy Node.js dependencies from builder
+# Copy React build output
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Copy production node_modules (includes better-sqlite3 native binary from builder)
 COPY --from=builder /app/node_modules /app/node_modules
 
-# Copy scripts
+# Copy application scripts and Express server
 COPY scripts /app/scripts
+COPY server  /app/server
 
-# Copy the build artifacts
-COPY build /usr/share/nginx/html
-
-# Copy nginx configuration
+# Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Create models directory and initial data
-RUN mkdir -p /usr/share/nginx/html
+# Persistent data directory for SQLite DB
+RUN mkdir -p /data
+VOLUME ["/data"]
 
-# Set up cron job to scrape models every 24 hours
+# Cron job: scrape models every 24 hours
 RUN echo "0 2 * * * cd /app && node scripts/scrape-models.js >> /var/log/cron.log 2>&1" > /etc/crontabs/root
 
-# Create log file for cron
+# Log file for cron
 RUN touch /var/log/cron.log
 
-# Copy and set up entrypoint script
+# Entrypoint
 COPY scripts/start.sh /start.sh
 RUN chmod +x /start.sh
 
-# Expose port 80
 EXPOSE 80
 
-# Start using custom entrypoint
 ENTRYPOINT ["/start.sh"]

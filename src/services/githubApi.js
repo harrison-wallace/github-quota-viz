@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { getActiveToken } from './profileService';
 
 // Helper to get environment variables (runtime or build-time)
 const getEnvVar = (key) => {
@@ -9,6 +8,9 @@ const getEnvVar = (key) => {
 const API_BASE_URL = 'https://api.github.com';
 
 // Create axios instance with default config
+// NOTE: The Authorization header is now set per-call by passing the token
+// explicitly (retrieved from the server via profileService.getActiveToken).
+// This avoids ever storing the raw token in the browser.
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -17,18 +19,17 @@ const apiClient = axios.create({
   },
 });
 
-// Add auth token to each request
-apiClient.interceptors.request.use((config) => {
-  // Try profile token first, then fallback to env var
-  const profileToken = getActiveToken();
+/**
+ * Build a per-request config with the provided token.
+ * Falls back to the REACT_APP_GITHUB_TOKEN env var if no token is supplied.
+ */
+const withToken = (token) => {
   const envToken = getEnvVar('REACT_APP_GITHUB_TOKEN');
-  const token = profileToken || envToken;
-  
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-  return config;
-});
+  const bearer = token || envToken;
+  return bearer
+    ? { headers: { Authorization: `Bearer ${bearer}` } }
+    : {};
+};
 
 /**
  * Retry logic with exponential backoff
@@ -63,11 +64,12 @@ const retryWithBackoff = async (fn, retries = 3, delay = 1000) => {
 /**
  * Get premium request usage for a user
  * @param {string} username - GitHub username
+ * @param {string} token    - Decrypted PAT (from server)
  * @param {number} year - Year (default: current year)
  * @param {number} month - Month 1-12 (default: current month)
  * @returns {Promise<Object>} - Premium request usage data
  */
-export const getPremiumRequestUsage = async (username, year = null, month = null) => {
+export const getPremiumRequestUsage = async (username, token, year = null, month = null) => {
   const params = {};
   if (year) params.year = year;
   if (month) params.month = month;
@@ -75,7 +77,7 @@ export const getPremiumRequestUsage = async (username, year = null, month = null
   return retryWithBackoff(async () => {
     const response = await apiClient.get(
       `/users/${username}/settings/billing/premium_request/usage`,
-      { params }
+      { params, ...withToken(token) }
     );
     return response.data;
   });
@@ -84,11 +86,12 @@ export const getPremiumRequestUsage = async (username, year = null, month = null
 /**
  * Get detailed billing usage report for a user
  * @param {string} username - GitHub username
+ * @param {string} token    - Decrypted PAT (from server)
  * @param {number} year - Year (default: current year)
  * @param {number} month - Month 1-12 (default: current month)
  * @returns {Promise<Object>} - Billing usage data
  */
-export const getBillingUsage = async (username, year = null, month = null) => {
+export const getBillingUsage = async (username, token, year = null, month = null) => {
   const params = {};
   if (year) params.year = year;
   if (month) params.month = month;
@@ -96,7 +99,7 @@ export const getBillingUsage = async (username, year = null, month = null) => {
   return retryWithBackoff(async () => {
     const response = await apiClient.get(
       `/users/${username}/settings/billing/usage`,
-      { params }
+      { params, ...withToken(token) }
     );
     return response.data;
   });
@@ -105,11 +108,12 @@ export const getBillingUsage = async (username, year = null, month = null) => {
 /**
  * Get usage summary for a user (PRIMARY ENDPOINT)
  * @param {string} username - GitHub username
+ * @param {string} token    - Decrypted PAT (from server)
  * @param {number} year - Year (default: current year)
  * @param {number} month - Month 1-12 (default: current month)
  * @returns {Promise<Object>} - Usage summary data
  */
-export const getUsageSummary = async (username, year = null, month = null) => {
+export const getUsageSummary = async (username, token, year = null, month = null) => {
   const params = {};
   if (year) params.year = year;
   if (month) params.month = month;
@@ -117,7 +121,7 @@ export const getUsageSummary = async (username, year = null, month = null) => {
   return retryWithBackoff(async () => {
     const response = await apiClient.get(
       `/users/${username}/settings/billing/usage/summary`,
-      { params }
+      { params, ...withToken(token) }
     );
     return response.data;
   });

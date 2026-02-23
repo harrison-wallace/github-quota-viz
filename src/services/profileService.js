@@ -1,167 +1,119 @@
-// Profile management service for GitHub tokens
-// Supports multiple profiles with base64 encoding and per-tab active profile selection
-
-const PROFILES_KEY = 'github_profiles_v1';
-
 /**
- * Generate a UUID (with fallback for older browsers/insecure contexts)
- * @returns {string} UUID string
+ * Profile management service — server-backed via /api/profiles.
+ *
+ * Profiles (including encrypted tokens) are stored in SQLite on the server.
+ * The active profile selection (per browser tab) remains in sessionStorage.
+ *
+ * One-time localStorage migration runs automatically on first load.
  */
-const generateUUID = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback for older browsers or insecure contexts
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.floor(Math.random() * 16);
-    const v = c === 'x' ? r : ((r & 0x3) | 0x8);
-    return v.toString(16);
-  });
-};
+
+import apiClient from './apiClient';
+
 const ACTIVE_PROFILE_KEY = 'github_active_profile';
+const MIGRATION_DONE_KEY = 'profiles_migrated_to_server_v1';
+
+// ---------------------------------------------------------------------------
+// Load / CRUD — all backed by the Express API
+// ---------------------------------------------------------------------------
 
 /**
- * Load all profiles from localStorage and env vars
- * @returns {Array} Array of profile objects with decoded tokens
+ * Load all profiles from the server.
+ * Returns an array of profile objects (tokenMask only — never the raw token).
  */
-export const loadProfiles = () => {
-  let profiles = [];
-  
-  // 1. Load from localStorage
+export const loadProfiles = async () => {
   try {
-    const stored = localStorage.getItem(PROFILES_KEY);
-    if (stored) {
-      profiles = JSON.parse(stored);
-    }
+    const res = await apiClient.get('/profiles');
+    return res.data;
   } catch (e) {
-    console.error('Error loading profiles from localStorage:', e);
-  }
-  
-  // 2. Load defaults from env if no profiles exist
-  if (profiles.length === 0 && window._env_?.REACT_APP_DEFAULT_PROFILES) {
-    try {
-      const envProfiles = JSON.parse(window._env_.REACT_APP_DEFAULT_PROFILES);
-      profiles = envProfiles.map(p => ({
-        ...p,
-        id: generateUUID(),
-        source: 'env'
-      }));
-      // Save to localStorage so they're available immediately
-      saveProfiles(profiles);
-    } catch (e) {
-      console.error('Error parsing REACT_APP_DEFAULT_PROFILES:', e);
-    }
-  }
-  
-  // 3. Decode tokens
-  return profiles.map(p => ({
-    ...p,
-    token: p.token ? atob(p.token) : ''
-  }));
-};
-
-/**
- * Save profiles to localStorage (with base64 encoded tokens)
- * @param {Array} profiles - Array of profile objects
- */
-export const saveProfiles = (profiles) => {
-  try {
-    // Encode tokens before saving
-    const encodedProfiles = profiles.map(p => ({
-      ...p,
-      token: p.token ? btoa(p.token) : ''
-    }));
-    localStorage.setItem(PROFILES_KEY, JSON.stringify(encodedProfiles));
-  } catch (e) {
-    console.error('Error saving profiles:', e);
+    console.error('Error loading profiles from server:', e);
+    return [];
   }
 };
 
 /**
- * Add a new profile
- * @param {Object} profile - Profile object with name, username, and token
- * @returns {Object} The saved profile with ID
+ * Add a new profile (validates the token against GitHub first).
  */
 export const addProfile = async (profile) => {
-  // Validate token first
   const isValid = await validateToken(profile.token);
-  if (!isValid) {
-    throw new Error('Invalid GitHub token');
-  }
-  
-  const newProfile = {
-    ...profile,
-    id: generateUUID(),
-    source: 'local',
-    createdAt: new Date().toISOString()
-  };
-  
-  const profiles = loadProfiles();
-  profiles.push(newProfile);
-  saveProfiles(profiles);
-  
-  return newProfile;
+  if (!isValid) throw new Error('Invalid GitHub token');
+
+  const res = await apiClient.post('/profiles', {
+    name:     profile.name,
+    username: profile.username,
+    token:    profile.token,
+    source:   profile.source || 'local',
+  });
+  return res.data;
 };
 
 /**
- * Delete a profile by ID
- * @param {string} profileId - Profile ID to delete
+ * Update a profile (pass token only when it has changed).
  */
-export const deleteProfile = (profileId) => {
-  const profiles = loadProfiles();
-  const filtered = profiles.filter(p => p.id !== profileId);
-  saveProfiles(filtered);
-  
-  // If we deleted the active profile, clear it
+export const updateProfile = async (id, updates) => {
+  const res = await apiClient.put(`/profiles/${id}`, updates);
+  return res.data;
+};
+
+/**
+ * Delete a profile by ID.
+ */
+export const deleteProfile = async (profileId) => {
+  await apiClient.delete(`/profiles/${profileId}`);
+
   const activeId = sessionStorage.getItem(ACTIVE_PROFILE_KEY);
   if (activeId === profileId) {
     sessionStorage.removeItem(ACTIVE_PROFILE_KEY);
   }
 };
 
+// ---------------------------------------------------------------------------
+// Active profile  (per-tab via sessionStorage)
+// ---------------------------------------------------------------------------
+
 /**
- * Get the currently active profile (per-tab)
- * @returns {Object|null} Active profile or null
+ * Resolve the active profile from a profiles array.
+ * Falls back to the first profile if nothing is selected.
  */
-export const getActiveProfile = () => {
+export const getActiveProfile = (profiles = []) => {
   const activeId = sessionStorage.getItem(ACTIVE_PROFILE_KEY);
-  if (!activeId) return null;
-  
-  const profiles = loadProfiles();
+  if (!activeId) return profiles[0] || null;
   return profiles.find(p => p.id === activeId) || profiles[0] || null;
 };
 
 /**
- * Set the active profile (per-tab)
- * @param {string} profileId - Profile ID to activate
+ * Persist the active profile selection for this tab.
  */
 export const setActiveProfile = (profileId) => {
   sessionStorage.setItem(ACTIVE_PROFILE_KEY, profileId);
 };
 
 /**
- * Get token for the active profile
- * @returns {string|null} Active profile token or null
+ * Fetch the decrypted token for a profile from the server.
+ * The raw token never touches browser storage.
  */
-export const getActiveToken = () => {
-  const activeProfile = getActiveProfile();
-  return activeProfile?.token || null;
+export const getActiveToken = async (profileId) => {
+  if (!profileId) return null;
+  try {
+    const res = await apiClient.get(`/profiles/${profileId}/token`);
+    return res.data.token || null;
+  } catch (e) {
+    console.error('Error fetching profile token:', e);
+    return null;
+  }
 };
 
-/**
- * Validate a GitHub token by making a test API call
- * @param {string} token - GitHub personal access token
- * @returns {Promise<boolean>} True if token is valid
- */
+// ---------------------------------------------------------------------------
+// Token validation  (direct GitHub API call — token only in memory)
+// ---------------------------------------------------------------------------
+
 export const validateToken = async (token) => {
   if (!token || token.length < 10) return false;
-  
   try {
     const response = await fetch('https://api.github.com/user', {
       headers: {
         'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
+        'Accept': 'application/vnd.github.v3+json',
+      },
     });
     return response.ok;
   } catch (e) {
@@ -171,27 +123,61 @@ export const validateToken = async (token) => {
 };
 
 /**
- * Mask a token for display (e.g., "ghp_••••abcd")
- * @param {string} token - Full token
- * @returns {string} Masked token
+ * Mask a token for display  (e.g. "ghp_••••abcd")
  */
 export const maskToken = (token) => {
   if (!token || token.length < 8) return '••••';
   return `${token.slice(0, 4)}••••${token.slice(-4)}`;
 };
 
-/**
- * Listen for profile changes from other tabs
- * @param {Function} callback - Function to call when profiles change
- * @returns {Function} Cleanup function
- */
+// ---------------------------------------------------------------------------
+// Cross-component change notification
+// ---------------------------------------------------------------------------
+
 export const onProfilesChange = (callback) => {
-  const handleStorageChange = (e) => {
-    if (e.key === PROFILES_KEY) {
-      callback(loadProfiles());
+  const handler = () => callback();
+  window.addEventListener('profilesUpdated', handler);
+  return () => window.removeEventListener('profilesUpdated', handler);
+};
+
+export const notifyProfilesUpdated = () => {
+  window.dispatchEvent(new CustomEvent('profilesUpdated'));
+};
+
+// ---------------------------------------------------------------------------
+// One-time migration from localStorage  (silent, runs once)
+// ---------------------------------------------------------------------------
+
+export const migrateFromLocalStorage = async () => {
+  if (localStorage.getItem(MIGRATION_DONE_KEY)) return;
+
+  const raw = localStorage.getItem('github_profiles_v1');
+  if (!raw) {
+    localStorage.setItem(MIGRATION_DONE_KEY, '1');
+    return;
+  }
+
+  try {
+    const stored = JSON.parse(raw);
+    for (const p of stored) {
+      const token = p.token ? atob(p.token) : '';
+      if (!token) continue;
+      try {
+        await apiClient.post('/profiles', {
+          name:     p.name || p.username,
+          username: p.username,
+          token,
+          source:   p.source || 'local',
+        });
+      } catch (err) {
+        console.warn(`[migration] Profile migration failed for ${p.username}:`, err.message);
+      }
     }
-  };
-  
-  window.addEventListener('storage', handleStorageChange);
-  return () => window.removeEventListener('storage', handleStorageChange);
+    localStorage.removeItem('github_profiles_v1');
+    console.log('[migration] Profiles migrated from localStorage to server.');
+  } catch (e) {
+    console.error('[migration] Profile migration error:', e);
+  }
+
+  localStorage.setItem(MIGRATION_DONE_KEY, '1');
 };

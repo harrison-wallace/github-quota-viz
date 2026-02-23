@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Form, Button, Alert, InputGroup, FormControl } from 'react-bootstrap';
 import { FaEye, FaEyeSlash, FaCheck, FaTimes, FaGithub } from 'react-icons/fa';
-import { addProfile, validateToken, maskToken, deleteProfile, loadProfiles } from '../services/profileService';
+import { addProfile, validateToken, maskToken, deleteProfile, loadProfiles, notifyProfilesUpdated } from '../services/profileService';
 
 const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdated }) => {
   const [name, setName] = useState('');
@@ -12,17 +12,18 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
   const [validationResult, setValidationResult] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [deleting, setDeleting] = useState(null); // profileId being deleted
 
   const handleValidate = async () => {
     if (!token || token.length < 10) {
       setValidationResult(false);
       return;
     }
-    
+
     setValidating(true);
     setValidationResult(null);
     setError('');
-    
+
     try {
       const isValid = await validateToken(token);
       setValidationResult(isValid);
@@ -38,22 +39,11 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
   };
 
   const handleAdd = async () => {
-    if (!name.trim()) {
-      setError('Please enter a profile name');
-      return;
-    }
-    
-    if (!username.trim()) {
-      setError('Please enter a GitHub username');
-      return;
-    }
-    
-    if (!token.trim()) {
-      setError('Please enter a GitHub token');
-      return;
-    }
-    
-    // Validate if not already validated
+    if (!name.trim()) { setError('Please enter a profile name'); return; }
+    if (!username.trim()) { setError('Please enter a GitHub username'); return; }
+    if (!token.trim()) { setError('Please enter a GitHub token'); return; }
+
+    // Validate if not already confirmed valid
     if (validationResult !== true) {
       setValidating(true);
       try {
@@ -72,7 +62,7 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
       }
       setValidating(false);
     }
-    
+
     try {
       const newProfile = await addProfile({ name: name.trim(), username: username.trim(), token: token.trim() });
       setSuccess(`Profile "${newProfile.name}" added successfully!`);
@@ -80,26 +70,34 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
       setUsername('');
       setToken('');
       setValidationResult(null);
-      
-      if (onProfileAdded) {
-        onProfileAdded(newProfile);
-      }
-      
-      // Reload profiles to update list
+
+      if (onProfileAdded) onProfileAdded(newProfile);
+
+      // Reload profiles list and notify other components
       if (onProfilesUpdated) {
-        onProfilesUpdated(loadProfiles());
+        const updated = await loadProfiles();
+        onProfilesUpdated(updated);
       }
+      notifyProfilesUpdated();
     } catch (e) {
       setError(e.message || 'Failed to add profile');
     }
   };
 
-  const handleDelete = (profileId) => {
-    if (window.confirm('Are you sure you want to delete this profile?')) {
-      deleteProfile(profileId);
+  const handleDelete = async (profileId) => {
+    if (!window.confirm('Are you sure you want to delete this profile?')) return;
+    setDeleting(profileId);
+    try {
+      await deleteProfile(profileId);
       if (onProfilesUpdated) {
-        onProfilesUpdated(loadProfiles());
+        const updated = await loadProfiles();
+        onProfilesUpdated(updated);
       }
+      notifyProfilesUpdated();
+    } catch (e) {
+      setError(e.message || 'Failed to delete profile');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -129,14 +127,14 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
             <h6 className="mb-3">Existing Profiles</h6>
             <div className="list-group">
               {profiles.map(profile => (
-                <div 
-                  key={profile.id} 
+                <div
+                  key={profile.id}
                   className="list-group-item d-flex justify-content-between align-items-center"
                 >
                   <div>
                     <strong>{profile.name}</strong>
                     <div className="text-muted small">
-                      @{profile.username} • {maskToken(profile.token)}
+                      @{profile.username} • {maskToken(profile.tokenMask || profile.token || '')}
                       {profile.source === 'env' && (
                         <span className="badge bg-secondary ms-2" style={{ fontSize: '0.6rem' }}>
                           Jenkins
@@ -144,12 +142,13 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
                       )}
                     </div>
                   </div>
-                  <Button 
-                    variant="outline-danger" 
+                  <Button
+                    variant="outline-danger"
                     size="sm"
+                    disabled={deleting === profile.id}
                     onClick={() => handleDelete(profile.id)}
                   >
-                    Delete
+                    {deleting === profile.id ? 'Deleting…' : 'Delete'}
                   </Button>
                 </div>
               ))}
@@ -160,13 +159,13 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
 
         {/* Add New Profile */}
         <h6 className="mb-3">Add New Profile</h6>
-        
+
         {error && (
           <Alert variant="danger" dismissible onClose={() => setError('')}>
             {error}
           </Alert>
         )}
-        
+
         {success && (
           <Alert variant="success" dismissible onClose={() => setSuccess('')}>
             {success}
@@ -201,7 +200,7 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
             <Form.Label>GitHub Personal Access Token</Form.Label>
             <InputGroup>
               <FormControl
-                type={showToken ? "text" : "password"}
+                type={showToken ? 'text' : 'password'}
                 placeholder="ghp_xxxxxxxxxxxx"
                 value={token}
                 onChange={(e) => {
@@ -209,35 +208,20 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
                   setValidationResult(null);
                 }}
               />
-              <Button 
-                variant="outline-secondary" 
-                onClick={() => setShowToken(!showToken)}
-              >
+              <Button variant="outline-secondary" onClick={() => setShowToken(!showToken)}>
                 {showToken ? <FaEyeSlash /> : <FaEye />}
               </Button>
-              <Button 
-                variant={validationResult === true ? "success" : validationResult === false ? "danger" : "outline-secondary"}
+              <Button
+                variant={validationResult === true ? 'success' : validationResult === false ? 'danger' : 'outline-secondary'}
                 onClick={handleValidate}
                 disabled={validating || !token}
               >
-                {validating ? (
-                  'Validating...'
-                ) : validationResult === true ? (
-                  <><FaCheck /> Valid</>
-                ) : validationResult === false ? (
-                  <><FaTimes /> Invalid</>
-                ) : (
-                  'Validate'
-                )}
+                {validating ? 'Validating...' : validationResult === true ? (<><FaCheck /> Valid</>) : validationResult === false ? (<><FaTimes /> Invalid</>) : 'Validate'}
               </Button>
             </InputGroup>
             <Form.Text className="text-muted">
               Create a <strong>Fine-grained personal access token</strong> at{' '}
-              <a 
-                href="https://github.com/settings/tokens" 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
+              <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">
                 github.com/settings/tokens
               </a>
               {' '}with <strong>Read access to plan</strong> permission.
@@ -249,8 +233,8 @@ const ProfileModal = ({ show, onHide, onProfileAdded, profiles, onProfilesUpdate
         <Button variant="secondary" onClick={handleClose}>
           Close
         </Button>
-        <Button 
-          variant="primary" 
+        <Button
+          variant="primary"
           onClick={handleAdd}
           disabled={!name.trim() || !token.trim() || validating}
         >

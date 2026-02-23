@@ -1,81 +1,92 @@
 import { useState, useEffect } from 'react';
 import {
   initializeTheme,
-  applyGlowSpeed,
-  applyPulseSpeed,
+  setGlowSpeed,
+  setPulseSpeed,
   toggleGlowEnabled,
   togglePulseEnabled,
 } from '../services/themeService';
+import apiClient from '../services/apiClient';
+
+const CHART_TYPE_SETTING_KEY = 'copilot-chart-type';
 
 /**
- * Custom hook for managing all settings-related state
- * Encapsulates chart type, effects, and animation speeds
+ * Custom hook for managing all settings-related state.
+ * Theme/effect values are initialised synchronously from localStorage (no flicker),
+ * then the server is queried for the authoritative values.
+ * All mutations are persisted to the server via /api/settings.
  */
 export const useSettingsState = () => {
-  // Chart type state with localStorage
+  // Chart type — initialise from localStorage cache, hydrate from server
   const [chartType, setChartType] = useState(() => {
-    return localStorage.getItem('copilot-chart-type') || 'pie';
+    return localStorage.getItem(CHART_TYPE_SETTING_KEY) || 'pie';
   });
 
   // Effects state
   const [glowEnabled, setGlowEnabled] = useState(false);
   const [pulseEnabled, setPulseEnabled] = useState(false);
-  const [glowSpeed, setGlowSpeed] = useState('normal');
-  const [pulseSpeed, setPulseSpeed] = useState('normal');
+  const [glowSpeed, setGlowSpeedState] = useState('normal');
+  const [pulseSpeed, setPulseSpeedState] = useState('normal');
 
-  // Accordion expand state
+  // Accordion expand state (UI-only, not persisted)
   const [glowExpanded, setGlowExpanded] = useState(false);
   const [pulseExpanded, setPulseExpanded] = useState(false);
 
-  // Initialize settings on mount and set up listeners
+  // Hydrate settings from server on mount
   useEffect(() => {
-    const { glowEnabled: savedGlowEnabled, pulseEnabled: savedPulseEnabled, glowSpeed: savedGlowSpeed, pulseSpeed: savedPulseSpeed } = initializeTheme();
-    setGlowEnabled(savedGlowEnabled);
-    setPulseEnabled(savedPulseEnabled);
-    setGlowSpeed(savedGlowSpeed);
-    setPulseSpeed(savedPulseSpeed);
+    const { glowEnabled: savedGlow, pulseEnabled: savedPulse, glowSpeed: savedGlowSpeed, pulseSpeed: savedPulseSpeed } = initializeTheme();
+    setGlowEnabled(savedGlow);
+    setPulseEnabled(savedPulse);
+    setGlowSpeedState(savedGlowSpeed);
+    setPulseSpeedState(savedPulseSpeed);
 
-    // Listen for glow enabled changes
-    const handleGlowEnabledChange = (e) => {
-      setGlowEnabled(e.detail.enabled);
-    };
+    // Async hydration from server — overwrites localStorage defaults if server has values
+    apiClient.get('/settings').then(res => {
+      const map = Object.fromEntries(res.data.map(r => [r.key, r.value]));
 
-    // Listen for pulse enabled changes
-    const handlePulseEnabledChange = (e) => {
-      setPulseEnabled(e.detail.enabled);
-    };
+      if (map['glow-enabled']  !== undefined) setGlowEnabled(map['glow-enabled'] === 'true');
+      if (map['pulse-enabled'] !== undefined) setPulseEnabled(map['pulse-enabled'] === 'true');
+      if (map['glow-speed'])   setGlowSpeedState(map['glow-speed']);
+      if (map['pulse-speed'])  setPulseSpeedState(map['pulse-speed']);
+      if (map[CHART_TYPE_SETTING_KEY]) {
+        setChartType(map[CHART_TYPE_SETTING_KEY]);
+        localStorage.setItem(CHART_TYPE_SETTING_KEY, map[CHART_TYPE_SETTING_KEY]);
+      }
+    }).catch(() => {
+      // Non-fatal — localStorage values are already applied
+    });
 
-    // Listen for glow speed changes
-    const handleGlowSpeedChange = (e) => {
-      setGlowSpeed(e.detail.speed);
-    };
+    // Listen for DOM events dispatched by themeService
+    const handleGlowEnabled  = (e) => setGlowEnabled(e.detail.enabled);
+    const handlePulseEnabled = (e) => setPulseEnabled(e.detail.enabled);
+    const handleGlowSpeed    = (e) => setGlowSpeedState(e.detail.speed);
+    const handlePulseSpeed   = (e) => setPulseSpeedState(e.detail.speed);
 
-    // Listen for pulse speed changes
-    const handlePulseSpeedChange = (e) => {
-      setPulseSpeed(e.detail.speed);
-    };
-
-    window.addEventListener('glowEnabledChange', handleGlowEnabledChange);
-    window.addEventListener('pulseEnabledChange', handlePulseEnabledChange);
-    window.addEventListener('glowSpeedChange', handleGlowSpeedChange);
-    window.addEventListener('pulseSpeedChange', handlePulseSpeedChange);
+    window.addEventListener('glowEnabledChange',  handleGlowEnabled);
+    window.addEventListener('pulseEnabledChange', handlePulseEnabled);
+    window.addEventListener('glowSpeedChange',    handleGlowSpeed);
+    window.addEventListener('pulseSpeedChange',   handlePulseSpeed);
 
     return () => {
-      window.removeEventListener('glowEnabledChange', handleGlowEnabledChange);
-      window.removeEventListener('pulseEnabledChange', handlePulseEnabledChange);
-      window.removeEventListener('glowSpeedChange', handleGlowSpeedChange);
-      window.removeEventListener('pulseSpeedChange', handlePulseSpeedChange);
+      window.removeEventListener('glowEnabledChange',  handleGlowEnabled);
+      window.removeEventListener('pulseEnabledChange', handlePulseEnabled);
+      window.removeEventListener('glowSpeedChange',    handleGlowSpeed);
+      window.removeEventListener('pulseSpeedChange',   handlePulseSpeed);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handler functions
+  // ---------------------------------------------------------------------------
+  // Handler functions — apply to DOM + persist to server
+  // ---------------------------------------------------------------------------
+
   const handleChartTypeChange = (type) => {
     setChartType(type);
-    localStorage.setItem('copilot-chart-type', type);
+    localStorage.setItem(CHART_TYPE_SETTING_KEY, type);
+    apiClient.put(`/settings/${CHART_TYPE_SETTING_KEY}`, { value: type }).catch(() => {});
   };
 
   const handleGlowEnabledToggle = () => {
-    const newState = toggleGlowEnabled();
+    const newState = toggleGlowEnabled(); // applies to DOM + updates localStorage
     setGlowEnabled(newState);
   };
 
@@ -85,13 +96,13 @@ export const useSettingsState = () => {
   };
 
   const handleGlowSpeedChange = (speedKey) => {
-    applyGlowSpeed(speedKey);
-    setGlowSpeed(speedKey);
+    setGlowSpeed(speedKey); // themeService: applies CSS + persists to server
+    setGlowSpeedState(speedKey);
   };
 
   const handlePulseSpeedChange = (speedKey) => {
-    applyPulseSpeed(speedKey);
     setPulseSpeed(speedKey);
+    setPulseSpeedState(speedKey);
   };
 
   return {
@@ -113,4 +124,3 @@ export const useSettingsState = () => {
     setPulseExpanded,
   };
 };
-

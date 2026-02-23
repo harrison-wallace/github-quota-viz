@@ -14,8 +14,8 @@ import { LazyLoadWrapper, LazyLoadCardSkeleton } from './hooks/useLazyLoad';
 import { useSettingsState } from './hooks/useSettingsState';
 import { getUsageSummary, getPremiumRequestUsage, transformUsageSummary, transformPremiumRequestData } from './services/githubApi';
 import { accentThemes, initializeTheme, applyAccentColor, toggleMode, getSavedMode } from './services/themeService';
-import { loadProfiles, getActiveProfile, setActiveProfile, onProfilesChange } from './services/profileService';
-import { recordDailyUsage } from './services/historicalDataService';
+import { loadProfiles, getActiveProfile, setActiveProfile, getActiveToken, onProfilesChange, migrateFromLocalStorage as migrateProfiles } from './services/profileService';
+import { recordDailyUsage, migrateFromLocalStorage as migrateUsage } from './services/historicalDataService';
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ function App() {
   const [summaryData, setSummaryData] = useState(null);
   const [premiumData, setPremiumData] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
-  
+
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedAccent, setSelectedAccent] = useState('ocean');
@@ -49,19 +49,31 @@ function App() {
   const [activeProfile, setActiveProfileState] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Initialize theme and profiles on mount
+  // Initialize theme and profiles on mount (async)
   useEffect(() => {
     const { mode, accent } = initializeTheme();
     setIsDarkMode(mode === 'dark');
     setSelectedAccent(accent);
 
-    // Load profiles
-    const loadedProfiles = loadProfiles();
-    setProfiles(loadedProfiles);
-    const active = getActiveProfile();
-    setActiveProfileState(active);
+    const init = async () => {
+      // Run one-time migrations from localStorage → server
+      await migrateProfiles();
 
-    // Listen for theme changes from other tabs
+      // Load profiles from server
+      const loadedProfiles = await loadProfiles();
+      setProfiles(loadedProfiles);
+      const active = getActiveProfile(loadedProfiles);
+      setActiveProfileState(active);
+
+      // Migrate historical usage data for all known profile IDs
+      if (loadedProfiles.length > 0) {
+        await migrateUsage(loadedProfiles.map(p => p.id));
+      }
+    };
+
+    init().catch(err => console.error('[App] init error:', err));
+
+    // Listen for theme changes
     const handleThemeChange = () => {
       setIsDarkMode(getSavedMode() === 'dark');
     };
@@ -69,9 +81,15 @@ function App() {
     window.addEventListener('storage', handleThemeChange);
     window.addEventListener('themeChange', handleThemeChange);
 
-    // Listen for profile changes from other tabs
-    const unsubscribeProfiles = onProfilesChange((updatedProfiles) => {
-      setProfiles(updatedProfiles);
+    // Listen for profile changes (modal creates/deletes)
+    const unsubscribeProfiles = onProfilesChange(async () => {
+      const updated = await loadProfiles();
+      setProfiles(updated);
+      setActiveProfileState(prev => {
+        // Keep the same active profile if it still exists, else fall back
+        const stillExists = updated.find(p => p.id === prev?.id);
+        return stillExists || getActiveProfile(updated);
+      });
     });
 
     return () => {
@@ -79,14 +97,14 @@ function App() {
       window.removeEventListener('themeChange', handleThemeChange);
       unsubscribeProfiles();
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchUsageData = useCallback(async () => {
     if (!activeProfile) {
       setError('Please select a profile');
       return;
     }
-    
+
     if (!activeProfile.username) {
       setError('Selected profile has no username configured');
       return;
@@ -96,9 +114,12 @@ function App() {
     setError(null);
 
     try {
+      // Fetch decrypted token from server — never stored in the browser
+      const token = await getActiveToken(activeProfile.id);
+
       const [summaryRaw, premiumRaw] = await Promise.all([
-        getUsageSummary(activeProfile.username),
-        getPremiumRequestUsage(activeProfile.username)
+        getUsageSummary(activeProfile.username, token),
+        getPremiumRequestUsage(activeProfile.username, token),
       ]);
 
       const summary = transformUsageSummary(summaryRaw);
@@ -129,48 +150,30 @@ function App() {
       fetchUsageData();
     }
 
-    // Set up hourly auto-refresh
     const autoRefreshInterval = setInterval(() => {
-      // Only refresh if the tab is visible
       if (document.visibilityState === 'visible' && activeProfile?.username) {
         fetchUsageData();
       }
-    }, 60 * 60 * 1000); // 1 hour in milliseconds
-
-    // Handle visibility change
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && activeProfile?.username) {
-        // Tab is now visible - auto-refresh will continue if needed
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    }, 60 * 60 * 1000);
 
     return () => {
       clearInterval(autoRefreshInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [activeProfile?.username, fetchUsageData]); // Depend on active profile username
+  }, [activeProfile?.username, fetchUsageData]);
 
-  // Update display every minute to show fresh "last updated" time
+  // Update "last updated" display every minute
   useEffect(() => {
     const displayUpdateInterval = setInterval(() => {
-      // Force component to re-render by setting a dummy state
-      // This updates the "last updated" text display
       setLastUpdated(prev => prev ? new Date(prev) : null);
-    }, 60000); // Update every minute
+    }, 60000);
 
-    return () => {
-      clearInterval(displayUpdateInterval);
-    };
+    return () => clearInterval(displayUpdateInterval);
   }, []);
 
   const handleProfileChange = (profileId) => {
-    setActiveProfile(profileId);  // Save to sessionStorage via profileService
+    setActiveProfile(profileId);
     const profile = profiles.find(p => p.id === profileId);
     setActiveProfileState(profile);
-    
-    // Refresh data with new profile
     if (profile?.username) {
       fetchUsageData();
     }
@@ -244,7 +247,7 @@ function App() {
             {/* Progress Bar - Full Width */}
             <Row className="mb-2">
               <Col>
-                <LazyLoadWrapper 
+                <LazyLoadWrapper
                   placeholder={<LazyLoadCardSkeleton title="Usage Progress" />}
                   rootMargin="200px"
                 >
@@ -256,7 +259,7 @@ function App() {
               </Col>
             </Row>
 
-            {/* Top Row: Projection (60%) + Model Table (40%) - Side by side on large screens */}
+            {/* Top Row: Projection (60%) + Model Table (40%) */}
             <Row className="mb-2 g-2 equal-height-row">
               <Col xl={7} lg={12} className="mb-2 mb-xl-0">
                 <ProjectionCard
@@ -278,10 +281,10 @@ function App() {
               </Col>
             </Row>
 
-            {/* Cost Summary Below */}
+            {/* Cost Summary */}
             <Row className="mb-2">
               <Col>
-                <LazyLoadWrapper 
+                <LazyLoadWrapper
                   placeholder={<LazyLoadCardSkeleton title="Cost Summary" />}
                   rootMargin="300px"
                 >
@@ -290,10 +293,10 @@ function App() {
               </Col>
             </Row>
 
-            {/* Available Models Below Cost Summary */}
+            {/* Available Models */}
             <Row className="mb-2">
               <Col>
-                <LazyLoadWrapper 
+                <LazyLoadWrapper
                   placeholder={<LazyLoadCardSkeleton title="Available Models" />}
                   rootMargin="300px"
                 >
@@ -304,30 +307,30 @@ function App() {
           </>
         )}
 
-         {!loading && !summaryData && !error && activeProfile && (
-           <Row>
-             <Col className="text-center text-muted py-5">
-               <p>No data available. Click "Refresh" to load usage data.</p>
-             </Col>
-           </Row>
-         )}
- 
-         {!loading && !summaryData && !error && !activeProfile && (
-           <Row>
-             <Col className="text-center text-muted py-5">
-               <FaGithub size={64} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-               <p>Please add a GitHub profile to view usage data.</p>
-               <Button 
-                 variant="primary" 
-                 onClick={() => setShowProfileModal(true)}
-                 className="mt-3"
-               >
-                 <FaUser className="me-2" />
-                 Add Profile
-               </Button>
-             </Col>
-           </Row>
-         )}
+        {!loading && !summaryData && !error && activeProfile && (
+          <Row>
+            <Col className="text-center text-muted py-5">
+              <p>No data available. Click "Refresh" to load usage data.</p>
+            </Col>
+          </Row>
+        )}
+
+        {!loading && !summaryData && !error && !activeProfile && (
+          <Row>
+            <Col className="text-center text-muted py-5">
+              <FaGithub size={64} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+              <p>Please add a GitHub profile to view usage data.</p>
+              <Button
+                variant="primary"
+                onClick={() => setShowProfileModal(true)}
+                className="mt-3"
+              >
+                <FaUser className="me-2" />
+                Add Profile
+              </Button>
+            </Col>
+          </Row>
+        )}
 
         {/* Profile Management Modal */}
         <ProfileModal
@@ -336,8 +339,7 @@ function App() {
           profiles={profiles}
           onProfilesUpdated={(updatedProfiles) => {
             setProfiles(updatedProfiles);
-            const active = getActiveProfile();
-            setActiveProfileState(active);
+            setActiveProfileState(getActiveProfile(updatedProfiles));
           }}
         />
       </Container>

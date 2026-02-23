@@ -1,263 +1,255 @@
 /**
- * Service for managing historical usage data
- * Stores daily snapshots to enable trend analysis
+ * Historical usage data service — server-backed via /api/usage.
+ *
+ * No 90-day cap. All history lives in SQLite.
+ * One-time migration of existing localStorage data runs via migrateFromLocalStorage().
+ *
+ * Pure-computation helpers (calculateBurnRate, projectEndOfMonthUsage,
+ * getActivityByDayOfWeek, getDailyActivityData) are unchanged — they operate
+ * on the data arrays returned by getHistoricalData().
  */
 
-const STORAGE_KEY_PREFIX = 'usage-history-';
-const HISTORY_RETENTION_DAYS = 90;
+import apiClient from './apiClient';
+
+const MIGRATION_DONE_KEY = 'usage_migrated_to_server_v1';
+
+// ---------------------------------------------------------------------------
+// Write
+// ---------------------------------------------------------------------------
 
 /**
- * Get storage key for a specific profile and metric
+ * Record (or update) a daily usage snapshot for a profile + metric.
  */
-const getStorageKey = (profileId, metric) => `${STORAGE_KEY_PREFIX}${profileId}-${metric}`;
-
-/**
- * Record daily usage snapshot
- */
-export const recordDailyUsage = (profileId, metric, value, date = new Date()) => {
+export const recordDailyUsage = async (profileId, metric, value, date = new Date()) => {
   if (!profileId || !metric) return null;
 
-  const key = getStorageKey(profileId, metric);
-  let history = JSON.parse(localStorage.getItem(key) || '[]');
-
-  // Format date as YYYY-MM-DD for consistency
   const dateStr = date.toISOString().split('T')[0];
 
-  // Check if entry for today already exists
-  const existingIndex = history.findIndex(h => h.date === dateStr);
-
-  const entry = {
-    date: dateStr,
-    value: value,
-    timestamp: new Date().getTime()
-  };
-
-  if (existingIndex >= 0) {
-    history[existingIndex] = entry;
-  } else {
-    history.push(entry);
+  try {
+    await apiClient.post('/usage', { profileId, metric, value, date: dateStr });
+    return { date: dateStr, value };
+  } catch (e) {
+    console.error('[history] recordDailyUsage error:', e);
+    return null;
   }
-
-  // Keep only last 90 days
-  history = history.filter(h => {
-    const historyDate = new Date(h.date);
-    const daysDiff = Math.floor((new Date() - historyDate) / (1000 * 60 * 60 * 24));
-    return daysDiff < HISTORY_RETENTION_DAYS;
-  });
-
-  localStorage.setItem(key, JSON.stringify(history));
-  return entry;
 };
 
+// ---------------------------------------------------------------------------
+// Read
+// ---------------------------------------------------------------------------
+
 /**
- * Get historical usage data
+ * Get historical snapshots for a profile + metric.
+ * @param {string} profileId
+ * @param {string} metric        'copilot' | 'actions' | …
+ * @param {number|null} days     Limit to last N days.  Null = all history.
+ * @returns {Promise<Array>}     [{date_str, value, recorded_at, …}, …]
  */
-export const getHistoricalData = (profileId, metric, days = 30) => {
+export const getHistoricalData = async (profileId, metric, days = null) => {
   if (!profileId || !metric) return [];
 
-  const key = getStorageKey(profileId, metric);
-  const history = JSON.parse(localStorage.getItem(key) || '[]');
+  try {
+    const params = {};
+    if (days) params.days = days;
 
-  // Filter to last N days
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
-
-  return history.filter(h => new Date(h.date) >= cutoffDate).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const res = await apiClient.get(`/usage/${profileId}/${metric}`, { params });
+    // Normalise to the shape the rest of the app expects: { date, value }
+    return res.data.map(r => ({
+      date:      r.date_str,
+      value:     r.value,
+      timestamp: r.recorded_at,
+    }));
+  } catch (e) {
+    console.error('[history] getHistoricalData error:', e);
+    return [];
+  }
 };
 
-/**
- * Calculate daily burn rate for a metric
- * Returns average daily consumption rate
- */
-export const calculateBurnRate = (profileId, metric, days = 7) => {
-  const history = getHistoricalData(profileId, metric, days);
+// ---------------------------------------------------------------------------
+// Pure computation helpers  (unchanged from original)
+// ---------------------------------------------------------------------------
 
-  if (history.length < 2) return null;
+export const calculateBurnRate = (history, days = 7) => {
+  // Accept either an array directly, or fall through to return null
+  if (!Array.isArray(history) || history.length < 2) return null;
 
-  const oldestValue = history[0].value;
-  const newestValue = history[history.length - 1].value;
-  const totalDaysData = Math.max(1, history.length - 1);
+  const recent = history.slice(-Math.max(days + 1, 2));
+  if (recent.length < 2) return null;
 
-  const totalBurned = newestValue - oldestValue;
-  const dailyBurnRate = totalBurned / totalDaysData;
+  const oldestValue    = recent[0].value;
+  const newestValue    = recent[recent.length - 1].value;
+  const totalDaysData  = Math.max(1, recent.length - 1);
+  const totalBurned    = newestValue - oldestValue;
+  const dailyBurnRate  = totalBurned / totalDaysData;
 
   return {
-    dailyRate: dailyBurnRate,
+    dailyRate:   dailyBurnRate,
     totalBurned,
-    daysOfData: totalDaysData,
-    startDate: history[0].date,
-    endDate: history[history.length - 1].date,
-    startValue: oldestValue,
-    endValue: newestValue
+    daysOfData:  totalDaysData,
+    startDate:   recent[0].date,
+    endDate:     recent[recent.length - 1].date,
+    startValue:  oldestValue,
+    endValue:    newestValue,
   };
 };
 
-/**
- * Calculate days remaining in month
- */
 export const getDaysRemainingInMonth = () => {
-  const now = new Date();
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const daysInMonth = lastDay.getDate();
-  const dayOfMonth = now.getDate();
-  return daysInMonth - dayOfMonth;
+  const now      = new Date();
+  const lastDay  = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return lastDay.getDate() - now.getDate();
 };
 
-/**
- * Project end-of-month usage based on current burn rate
- */
 export const projectEndOfMonthUsage = (currentUsage, burnRate, quotaLimit = null) => {
-  const daysRemaining = getDaysRemainingInMonth();
+  const daysRemaining           = getDaysRemainingInMonth();
   const projectedAdditionalUsage = burnRate * daysRemaining;
-  const projectedTotal = currentUsage + projectedAdditionalUsage;
+  const projectedTotal           = currentUsage + projectedAdditionalUsage;
 
-  const result = {
+  return {
     currentUsage,
     projectedAdditionalUsage,
     projectedTotal,
     daysRemaining,
     quotaLimit,
     percentageOfQuota: quotaLimit ? (projectedTotal / quotaLimit) * 100 : null,
-    willExceedQuota: quotaLimit ? projectedTotal > quotaLimit : false,
-    usageHeadroom: quotaLimit ? quotaLimit - projectedTotal : null
+    willExceedQuota:   quotaLimit ? projectedTotal > quotaLimit : false,
+    usageHeadroom:     quotaLimit ? quotaLimit - projectedTotal : null,
   };
-
-  return result;
 };
 
-/**
- * Get activity by day of week
- * Returns breakdown like GitHub's contribution graph
- */
-export const getActivityByDayOfWeek = (profileId, metric, weeks = 12) => {
-  const history = getHistoricalData(profileId, metric, weeks * 7);
+export const getActivityByDayOfWeek = (history) => {
+  if (!history || history.length === 0) return {};
 
-  if (history.length === 0) return {};
-
-  // Group by day of week
   const dayOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const activityByDay = {
-    Sunday: [],
-    Monday: [],
-    Tuesday: [],
-    Wednesday: [],
-    Thursday: [],
-    Friday: [],
-    Saturday: []
-  };
+  const activityByDay  = Object.fromEntries(dayOfWeekNames.map(d => [d, []]));
 
   history.forEach(entry => {
-    const date = new Date(entry.date);
-    const dayName = dayOfWeekNames[date.getDay()];
+    const dayName = dayOfWeekNames[new Date(entry.date).getDay()];
     activityByDay[dayName].push(entry.value);
   });
 
-  // Calculate stats for each day
   const stats = {};
   dayOfWeekNames.forEach(day => {
     const values = activityByDay[day];
     if (values.length > 0) {
       stats[day] = {
-        totalUsage: values.reduce((a, b) => a + b, 0),
+        totalUsage:   values.reduce((a, b) => a + b, 0),
         averageUsage: values.reduce((a, b) => a + b, 0) / values.length,
-        count: values.length,
-        maxUsage: Math.max(...values),
-        minUsage: Math.min(...values)
+        count:        values.length,
+        maxUsage:     Math.max(...values),
+        minUsage:     Math.min(...values),
       };
     } else {
-      stats[day] = {
-        totalUsage: 0,
-        averageUsage: 0,
-        count: 0,
-        maxUsage: 0,
-        minUsage: 0
-      };
+      stats[day] = { totalUsage: 0, averageUsage: 0, count: 0, maxUsage: 0, minUsage: 0 };
     }
   });
 
   return stats;
 };
 
-/**
- * Get daily usage data formatted for activity heatmap/graph
- */
-export const getDailyActivityData = (profileId, metric, weeks = 12) => {
-  const history = getHistoricalData(profileId, metric, weeks * 7);
-  const today = new Date();
+export const getDailyActivityData = (history, weeks = 12) => {
+  const today     = new Date();
   const startDate = new Date(today);
   startDate.setDate(today.getDate() - weeks * 7);
 
-  // Create array of all dates in range
   const allDates = [];
-  const current = new Date(startDate);
+  const current  = new Date(startDate);
   while (current <= today) {
     allDates.push(new Date(current));
     current.setDate(current.getDate() + 1);
   }
 
-  // Map to history
   const historyMap = {};
-  history.forEach(h => {
-    historyMap[h.date] = h.value;
-  });
+  (history || []).forEach(h => { historyMap[h.date] = h.value; });
 
-  // Create activity data grouped by week
-  const weeks_data = [];
-  let currentWeek = [];
+  const weeksData   = [];
+  let currentWeek   = [];
   let weekStartDate = null;
 
   allDates.forEach((date, index) => {
-    if (!weekStartDate) {
-      weekStartDate = new Date(date);
-    }
+    if (!weekStartDate) weekStartDate = new Date(date);
 
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr   = date.toISOString().split('T')[0];
     const dayOfWeek = date.getDay();
 
     currentWeek.push({
-      date: dateStr,
-      dateObj: new Date(date),
-      dayOfWeek: dayOfWeek,
-      dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
-      value: historyMap[dateStr] || 0,
-      isToday: dateStr === today.toISOString().split('T')[0]
+      date:      dateStr,
+      dateObj:   new Date(date),
+      dayOfWeek,
+      dayName:   ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
+      value:     historyMap[dateStr] || 0,
+      isToday:   dateStr === today.toISOString().split('T')[0],
     });
 
-    // Add week when we hit Saturday or the last day
     if (dayOfWeek === 6 || index === allDates.length - 1) {
-      weeks_data.push({
-        weekStart: weekStartDate.toISOString().split('T')[0],
-        days: currentWeek
-      });
-      currentWeek = [];
+      weeksData.push({ weekStart: weekStartDate.toISOString().split('T')[0], days: currentWeek });
+      currentWeek   = [];
       weekStartDate = null;
     }
   });
 
-  return weeks_data;
+  return weeksData;
 };
 
-/**
- * Clear all historical data for a profile
- */
-export const clearHistoricalData = (profileId) => {
-  const metrics = ['actions', 'copilot'];
-  metrics.forEach(metric => {
-    const key = getStorageKey(profileId, metric);
-    localStorage.removeItem(key);
-  });
+// ---------------------------------------------------------------------------
+// Delete
+// ---------------------------------------------------------------------------
+
+export const clearHistoricalData = async (profileId) => {
+  try {
+    await apiClient.delete(`/usage/${profileId}`);
+  } catch (e) {
+    console.error('[history] clearHistoricalData error:', e);
+  }
 };
 
-/**
- * Export historical data as JSON
- */
-export const exportHistoricalData = (profileId) => {
-  const metrics = ['actions', 'copilot'];
-  const data = {};
+export const exportHistoricalData = async (profileId) => {
+  const [copilot, actions] = await Promise.all([
+    getHistoricalData(profileId, 'copilot'),
+    getHistoricalData(profileId, 'actions'),
+  ]);
+  return { copilot, actions };
+};
 
-  metrics.forEach(metric => {
-    data[metric] = getHistoricalData(profileId, metric, 90);
-  });
+// ---------------------------------------------------------------------------
+// One-time migration from localStorage  (silent, runs once)
+// ---------------------------------------------------------------------------
 
-  return data;
+export const migrateFromLocalStorage = async (profileIds = []) => {
+  if (localStorage.getItem(MIGRATION_DONE_KEY)) return;
+
+  const metrics = ['copilot', 'actions'];
+  const snapshots = [];
+
+  for (const profileId of profileIds) {
+    for (const metric of metrics) {
+      const key = `usage-history-${profileId}-${metric}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+
+      try {
+        const entries = JSON.parse(raw);
+        entries.forEach(e => {
+          snapshots.push({
+            profileId,
+            metric,
+            value:     e.value,
+            date:      e.date,
+            timestamp: e.timestamp || Date.now(),
+          });
+        });
+        localStorage.removeItem(key);
+      } catch { /* ignore parse errors */ }
+    }
+  }
+
+  if (snapshots.length > 0) {
+    try {
+      await apiClient.post('/usage/batch', { snapshots });
+      console.log(`[migration] Migrated ${snapshots.length} usage snapshots from localStorage.`);
+    } catch (e) {
+      console.error('[migration] Usage migration error:', e);
+    }
+  }
+
+  localStorage.setItem(MIGRATION_DONE_KEY, '1');
 };

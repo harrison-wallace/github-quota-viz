@@ -18,7 +18,7 @@ pipeline {
                 script {
                     // Skip validation for tags - they are inherently valid deployment triggers
                     if (env.TAG_NAME) {
-                        echo "🏷️ Tag '${env.TAG_NAME}' detected - skipping branch validation"
+                        echo "Tag '${env.TAG_NAME}' detected - skipping branch validation"
                         return
                     }
                     
@@ -27,7 +27,7 @@ pipeline {
                     
                     if (!branchName.matches(validPattern)) {
                         error("""
-                            ❌ Branch name '${branchName}' does not follow Git Flow naming convention!
+                            Branch name '${branchName}' does not follow Git Flow naming convention!
                             
                             Allowed patterns:
                             - main (production)
@@ -42,7 +42,7 @@ pipeline {
                         """)
                     }
                     
-                    echo "✅ Branch name '${branchName}' is valid"
+                    echo "Branch name '${branchName}' is valid"
                 }
             }
         }
@@ -61,12 +61,9 @@ pipeline {
             steps {
                 echo 'Installing Node.js dependencies...'
                 sh '''
-                    # Use Node.js 20
                     export PATH=/usr/local/bin:$PATH
                     node --version
                     npm --version
-                    
-                    # Install dependencies
                     npm ci
                 '''
             }
@@ -90,10 +87,7 @@ pipeline {
             steps {
                 echo 'Building React application...'
                 sh '''
-                    # Build the React app
                     npm run build
-                    
-                    # Verify build output
                     ls -la build/
                 '''
             }
@@ -103,10 +97,7 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
                 sh '''
-                    # Build Docker image using the Dockerfile
                     docker build -t ${IMAGE_NAME} .
-                    
-                    # Verify image was created
                     docker images | grep ${IMAGE_NAME}
                 '''
             }
@@ -123,10 +114,7 @@ pipeline {
                     echo "Updating package.json to version ${versionTag}"
                     
                     sh """
-                        # Update package.json with the tag version
                         sed -i 's/"version": ".*"/"version": "${versionTag.replace('v', '')}"/' package.json
-                        
-                        # Show the updated version
                         cat package.json | grep '"version"'
                     """
                 }
@@ -140,22 +128,34 @@ pipeline {
             steps {
                 echo 'Deploying Docker container...'
                 script {
-                    // Remove old container first
                     sh """
                         echo "Removing old container if exists..."
                         docker rm -f ${params.CONTAINER_NAME} 2>/dev/null || true
                     """
                     
-                    def dockerCmd = "docker run -d --name ${params.CONTAINER_NAME} -p ${params.PORT}:80 --restart unless-stopped"
-                    
-                    // Add proxy network connection if requested
-                    if (params.CONNECT_TO_PROXY) {
-                        dockerCmd += " --network proxy"
+                    withCredentials([
+                        string(credentialsId: 'GITHUB_QUOTA_API_KEY', variable: 'API_SECRET_KEY'),
+                        string(credentialsId: 'GITHUB_QUOTA_ENC_KEY', variable: 'TOKEN_ENCRYPTION_KEY')
+                    ]) {
+                        def volumeName = "${params.CONTAINER_NAME}-data"
+                        
+                        def dockerCmd = "docker run -d" +
+                            " --name ${params.CONTAINER_NAME}" +
+                            " -p ${params.PORT}:80" +
+                            " --restart unless-stopped" +
+                            " -v ${volumeName}:/data" +
+                            " -e API_SECRET_KEY=\${API_SECRET_KEY}" +
+                            " -e TOKEN_ENCRYPTION_KEY=\${TOKEN_ENCRYPTION_KEY}" +
+                            " -e REACT_APP_API_KEY=\${API_SECRET_KEY}"
+                        
+                        if (params.CONNECT_TO_PROXY) {
+                            dockerCmd += " --network proxy"
+                        }
+                        
+                        dockerCmd += " ${env.IMAGE_NAME}"
+                        
+                        sh dockerCmd
                     }
-                    
-                    dockerCmd += " ${env.IMAGE_NAME}"
-                    
-                    sh dockerCmd
                 }
             }
         }
@@ -167,16 +167,9 @@ pipeline {
             steps {
                 echo 'Verifying container is running...'
                 sh """
-                    # Wait for container to start
                     sleep 5
-                    
-                    # Check container status
                     docker ps | grep ${params.CONTAINER_NAME}
-                    
-                    # Check container logs
                     docker logs ${params.CONTAINER_NAME}
-                    
-                    # Test HTTP endpoint
                     curl -f http://localhost:${params.PORT} || echo "Warning: HTTP check failed"
                 """
             }
@@ -187,15 +180,16 @@ pipeline {
         success {
             script {
                 if (env.TAG_NAME) {
-                    echo "🚀 Deployment successful!"
+                    echo "Deployment successful!"
                     echo "Version: ${env.TAG_NAME}"
                     echo "Access the dashboard at: http://localhost:${params.PORT}"
                     echo "Container name: ${params.CONTAINER_NAME}"
+                    echo "Data volume: ${params.CONTAINER_NAME}-data"
                 } else if (env.BRANCH_NAME == 'main') {
-                    echo "✅ Build and tests successful on main branch!"
+                    echo "Build and tests successful on main branch!"
                     echo "To deploy: create a version tag (e.g., git tag -a v1.0.0 -m 'Version 1.0.0')"
                 } else {
-                    echo "✅ Build and tests successful! (Branch: ${env.BRANCH_NAME})"
+                    echo "Build and tests successful! (Branch: ${env.BRANCH_NAME})"
                 }
             }
         }
@@ -203,16 +197,13 @@ pipeline {
         failure {
             script {
                 if (env.TAG_NAME) {
-                    echo '❌ Deployment failed!'
+                    echo 'Deployment failed!'
                     sh """
-                        # Show container logs if available
                         docker logs ${params.CONTAINER_NAME} 2>/dev/null || true
-
-                        # Cleanup failed container
                         docker rm -f ${params.CONTAINER_NAME} 2>/dev/null || true
                     """
                 } else {
-                    echo "❌ Build failed! (Branch: ${env.BRANCH_NAME})"
+                    echo "Build failed! (Branch: ${env.BRANCH_NAME})"
                 }
             }
         }

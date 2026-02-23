@@ -1,34 +1,54 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, ProgressBar, Alert } from 'react-bootstrap';
 import { FaChartLine, FaExclamationTriangle, FaCheckCircle, FaRobot, FaTerminal } from 'react-icons/fa';
-import { calculateBurnRate, projectEndOfMonthUsage, getDaysRemainingInMonth } from '../services/historicalDataService';
+import { getHistoricalData, calculateBurnRate, projectEndOfMonthUsage, getDaysRemainingInMonth } from '../services/historicalDataService';
 
-const ProjectionCard = ({ 
-  profileId, 
-  copilotUsage, 
+const ProjectionCard = ({
+  profileId,
+  copilotUsage,
   copilotQuota = 1500,
   actionsUsage,
   actionsQuota = 3000,
   title = 'Usage Projection',
   className = ''
 }) => {
-  const copilotBurnRate = useMemo(() => {
-    return calculateBurnRate(profileId, 'copilot', 7);
+  const [copilotBurnRate, setCopilotBurnRate] = useState(null);
+  const [actionsBurnRate, setActionsBurnRate] = useState(null);
+
+  // Fetch history and compute burn rates whenever the active profile changes
+  useEffect(() => {
+    if (!profileId) {
+      setCopilotBurnRate(null);
+      setActionsBurnRate(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchAndCompute = async () => {
+      const [copilotHistory, actionsHistory] = await Promise.all([
+        getHistoricalData(profileId, 'copilot', 30),
+        getHistoricalData(profileId, 'actions', 30),
+      ]);
+
+      if (cancelled) return;
+
+      setCopilotBurnRate(calculateBurnRate(copilotHistory, 7));
+      setActionsBurnRate(calculateBurnRate(actionsHistory, 7));
+    };
+
+    fetchAndCompute().catch(err => console.error('[ProjectionCard] history fetch error:', err));
+
+    return () => { cancelled = true; };
   }, [profileId]);
 
-  const actionsBurnRate = useMemo(() => {
-    return calculateBurnRate(profileId, 'actions', 7);
-  }, [profileId]);
+  const copilotProjection = copilotBurnRate
+    ? projectEndOfMonthUsage(copilotUsage, copilotBurnRate.dailyRate, copilotQuota)
+    : null;
 
-  const copilotProjection = useMemo(() => {
-    if (!copilotBurnRate) return null;
-    return projectEndOfMonthUsage(copilotUsage, copilotBurnRate.dailyRate, copilotQuota);
-  }, [copilotBurnRate, copilotUsage, copilotQuota]);
-
-  const actionsProjection = useMemo(() => {
-    if (!actionsBurnRate) return null;
-    return projectEndOfMonthUsage(actionsUsage, actionsBurnRate.dailyRate, actionsQuota);
-  }, [actionsBurnRate, actionsUsage, actionsQuota]);
+  const actionsProjection = actionsBurnRate
+    ? projectEndOfMonthUsage(actionsUsage, actionsBurnRate.dailyRate, actionsQuota)
+    : null;
 
   const daysRemaining = getDaysRemainingInMonth();
 
@@ -48,7 +68,7 @@ const ProjectionCard = ({
         {title}
       </Card.Header>
       <Card.Body className="compact-body">
-        {/* Current Status Section - Always Visible */}
+        {/* Current Status - Always Visible */}
         <div className="mb-3 pb-2" style={{ borderBottom: '1px solid var(--border-color)' }}>
           <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '0.875rem' }}>
             <span className="text-secondary">Current Usage:</span>
@@ -60,10 +80,9 @@ const ProjectionCard = ({
           </div>
         </div>
 
-        {/* Projections Section - Conditional */}
+        {/* Projections */}
         {copilotBurnRate && copilotProjection ? (
           <>
-            {/* Copilot Alert */}
             {copilotWillExceed && (
               <Alert variant="danger" className="mb-2 py-2 px-2 compact-alert">
                 <div className="d-flex align-items-center">
@@ -90,7 +109,7 @@ const ProjectionCard = ({
               </Alert>
             )}
 
-            {/* Copilot Projected Usage Progress Bar */}
+            {/* Copilot Projected Progress Bar */}
             <div className="mb-3">
               <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8125rem' }}>
                 <span className="fw-bold">
@@ -132,7 +151,7 @@ const ProjectionCard = ({
           </Alert>
         )}
 
-        {/* Actions Projected Usage Progress Bar */}
+        {/* Actions Projected Progress Bar */}
         {actionsProjection && actionsBurnRate && (
           <div className="mb-3">
             <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8125rem' }}>
@@ -162,9 +181,9 @@ const ProjectionCard = ({
           </div>
         )}
 
-        {/* Compact Inline Stats - 3 columns x 2 rows grid */}
+        {/* Compact Stats Grid */}
         <div className="compact-stats-grid-combined projection-stats-grid">
-          {/* Row 1: Copilot Stats */}
+          {/* Row 1: Copilot */}
           <div className="compact-stat-item">
             <span className="compact-stat-label">
               <FaRobot className="me-1" style={{ fontSize: '0.65rem' }} />
@@ -192,8 +211,8 @@ const ProjectionCard = ({
               {copilotProjection ? copilotProjectedTotal.toFixed(0) : '...'}
             </span>
           </div>
-          
-          {/* Row 2: Actions Stats */}
+
+          {/* Row 2: Actions */}
           <div className="compact-stat-item">
             <span className="compact-stat-label">
               <FaTerminal className="me-1" style={{ fontSize: '0.65rem' }} />
@@ -221,8 +240,8 @@ const ProjectionCard = ({
               {actionsBurnRate ? `${actionsBurnRate.dailyRate.toFixed(1)}/d` : '...'}
             </span>
           </div>
-          
-          {/* Days Remaining - Spans full width */}
+
+          {/* Days Remaining - full width */}
           <div className="compact-stat-item" style={{ gridColumn: 'span 3' }}>
             <span className="compact-stat-label">Days Left in Month</span>
             <span className="compact-stat-value" style={{ color: 'var(--text-secondary)' }}>
