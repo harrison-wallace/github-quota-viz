@@ -23,12 +23,16 @@ RUN npm ci --only=production
 # Stage 2: production image
 FROM nginx:alpine
 
-# Runtime deps: Node.js for the Express server + cron
+# Runtime deps: cron + curl only — Node 18 is copied from builder to match
+# the ABI that better-sqlite3's native addon was compiled against.
 RUN apk add --no-cache \
-    nodejs \
-    npm \
     dcron \
     curl
+
+# Copy Node 18 runtime from builder (same binary better-sqlite3 was compiled with)
+COPY --from=builder /usr/local/bin/node /usr/local/bin/node
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=builder /usr/local/bin/npm /usr/local/bin/npm
 
 # Copy React build output
 COPY --from=builder /app/build /usr/share/nginx/html

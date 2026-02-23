@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Container, Row, Col, Alert, Button } from 'react-bootstrap';
 import { FaGithub, FaUser } from 'react-icons/fa';
 import CopilotProgressBar from './components/CopilotProgressBar';
@@ -48,6 +48,10 @@ function App() {
   const [profiles, setProfiles] = useState([]);
   const [activeProfile, setActiveProfileState] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Track when data was last fetched — used by the auto-refresh timer and
+  // the visibilitychange catch-up handler to avoid redundant fetches.
+  const lastFetchTime = useRef(null);
 
   // Initialize theme and profiles on mount (async)
   useEffect(() => {
@@ -128,6 +132,7 @@ function App() {
       setSummaryData(summary);
       setPremiumData(premium);
       setLastUpdated(new Date());
+      lastFetchTime.current = Date.now();
 
       // Record daily usage for historical tracking
       if (activeProfile.id && summary) {
@@ -142,7 +147,10 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [activeProfile]);
+  // Use stable primitives (id, username) rather than the full object reference
+  // so this callback — and the timer that depends on it — isn't recreated on
+  // every profile-related state update.
+  }, [activeProfile?.id, activeProfile?.username]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial fetch and hourly auto-refresh
   useEffect(() => {
@@ -150,14 +158,33 @@ function App() {
       fetchUsageData();
     }
 
+    const AUTO_REFRESH_MS = 60 * 60 * 1000; // 60 minutes
+
     const autoRefreshInterval = setInterval(() => {
       if (document.visibilityState === 'visible' && activeProfile?.username) {
         fetchUsageData();
       }
-    }, 60 * 60 * 1000);
+    }, AUTO_REFRESH_MS);
+
+    // Catch-up handler: if a timer tick was missed while the tab was hidden,
+    // fire a refresh as soon as the tab becomes visible again — but only if
+    // it has been at least 60 minutes since the last successful fetch.
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        activeProfile?.username &&
+        (lastFetchTime.current === null ||
+          Date.now() - lastFetchTime.current >= AUTO_REFRESH_MS)
+      ) {
+        fetchUsageData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(autoRefreshInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [activeProfile?.username, fetchUsageData]);
 
