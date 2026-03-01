@@ -79,60 +79,132 @@ export const getHistoricalData = async (profileId, metric, days = null) => {
  * @returns {Object|null} - Burn rate object or null if insufficient data
  */
 export const calculateBurnRate = (history, days = 7, monthStart = null) => {
-  if (!Array.isArray(history) || history.length < 2) return null;
+   if (!Array.isArray(history) || history.length < 2) return null;
 
-  // Default: use the 1st of current month at 00:00 UTC
-  const billingMonthStart = monthStart || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const monthStartStr = billingMonthStart.toISOString().split('T')[0];
+   // Default: use the 1st of current month at 00:00 UTC
+   const billingMonthStart = monthStart || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+   const monthStartStr = billingMonthStart.toISOString().split('T')[0];
 
-  // Filter to current month only
-  const currentMonthHistory = history.filter(entry => entry.date >= monthStartStr);
+   // Filter to current month only
+   const currentMonthHistory = history.filter(entry => entry.date >= monthStartStr);
 
-  if (currentMonthHistory.length < 2) {
-    console.log(`[calculateBurnRate] Only ${currentMonthHistory.length} data points in current month (need 2+). Using all available data.`);
-    // Fallback: use last 7 days of available data
-    const recent = history.slice(-Math.max(days + 1, 2));
-    if (recent.length < 2) return null;
+   if (currentMonthHistory.length < 2) {
+     console.log(`[calculateBurnRate] Only ${currentMonthHistory.length} data points in current month (need 2+). Checking for month boundary reset...`);
+     
+     // Special case: If we're early in the month with only 1 data point, 
+     // it means we just reset. Use current usage as the burn amount over 1 day.
+     if (currentMonthHistory.length === 1) {
+       const currentValue = currentMonthHistory[0].value;
+       const daysIntoMonth = new Date().getDate();
+       
+       // If we're on day 1-2 of the month and just have today's data,
+       // assume we started at 0 and burned up to currentValue
+       if (daysIntoMonth <= 2) {
+         console.log(`[calculateBurnRate] Month reset detected (${daysIntoMonth} days into month, 1 data point). Using current usage (${currentValue}) as initial burn.`);
+         const dailyBurnRate = currentValue / Math.max(1, daysIntoMonth - 1 || 1);
+         
+         return {
+           dailyRate:   dailyBurnRate,
+           totalBurned: currentValue,
+           daysOfData:  Math.max(1, daysIntoMonth - 1 || 1),
+           startDate:   currentMonthHistory[0].date,
+           endDate:     currentMonthHistory[0].date,
+           startValue:  0,
+           endValue:    currentValue,
+           isLimited:   true,
+         };
+       }
+       
+       // If more days into month, use the last 7 days but ensure we don't cross reset boundary
+       const recent = history.slice(-Math.max(days + 1, 2));
+       if (recent.length >= 2) {
+         // Find the reset point (big drop in values)
+         const resetIndex = recent.findIndex((entry, idx) => {
+           if (idx === 0) return false;
+           const prev = recent[idx - 1];
+           const drop = prev.value - entry.value;
+           return drop > entry.value * 0.5; // 50% drop = likely reset
+         });
+         
+         if (resetIndex > 0) {
+           // Use data after reset only
+           console.log(`[calculateBurnRate] Reset detected at index ${resetIndex}. Using data after reset.`);
+           const afterReset = recent.slice(resetIndex);
+           if (afterReset.length >= 2) {
+             const oldestValue = afterReset[0].value;
+             const newestValue = afterReset[afterReset.length - 1].value;
+             const totalDaysData = Math.max(1, afterReset.length - 1);
+             const totalBurned = newestValue - oldestValue;
+             const dailyBurnRate = totalBurned / totalDaysData;
+             
+             return {
+               dailyRate:   dailyBurnRate,
+               totalBurned,
+               daysOfData:  totalDaysData,
+               startDate:   afterReset[0].date,
+               endDate:     afterReset[afterReset.length - 1].date,
+               startValue:  oldestValue,
+               endValue:    newestValue,
+               isLimited:   true,
+             };
+           }
+         }
+       }
+       
+       // Fallback: insufficient data
+       return null;
+     }
+     
+     // Fallback: use last 7 days of available data
+     const recent = history.slice(-Math.max(days + 1, 2));
+     if (recent.length < 2) return null;
 
-    const oldestValue   = recent[0].value;
-    const newestValue   = recent[recent.length - 1].value;
-    const totalDaysData = Math.max(1, recent.length - 1);
-    const totalBurned   = newestValue - oldestValue;
-    const dailyBurnRate = totalBurned / totalDaysData;
+     const oldestValue   = recent[0].value;
+     const newestValue   = recent[recent.length - 1].value;
+     const totalDaysData = Math.max(1, recent.length - 1);
+     let totalBurned   = newestValue - oldestValue;
+     
+     // If negative, usage likely went down due to reset - treat as "starting fresh this month"
+     if (totalBurned < 0) {
+       console.log(`[calculateBurnRate] Negative burn detected across reset (${oldestValue} -> ${newestValue}). Treating current usage as start of month.`);
+       totalBurned = newestValue; // Current usage is the total for the month
+     }
+     
+     const dailyBurnRate = totalBurned / totalDaysData;
 
-    return {
-      dailyRate:   dailyBurnRate,
-      totalBurned,
-      daysOfData:  totalDaysData,
-      startDate:   recent[0].date,
-      endDate:     recent[recent.length - 1].date,
-      startValue:  oldestValue,
-      endValue:    newestValue,
-      isLimited:   true,
-    };
-  }
+     return {
+       dailyRate:   dailyBurnRate,
+       totalBurned,
+       daysOfData:  totalDaysData,
+       startDate:   recent[0].date,
+       endDate:     recent[recent.length - 1].date,
+       startValue:  oldestValue,
+       endValue:    newestValue,
+       isLimited:   true,
+     };
+   }
 
-  // Use 7-day window within current month, or all available if less than 7 days
-  const recent = currentMonthHistory.slice(-Math.max(days + 1, 2));
+   // Use 7-day window within current month, or all available if less than 7 days
+   const recent = currentMonthHistory.slice(-Math.max(days + 1, 2));
 
-  const oldestValue    = recent[0].value;
-  const newestValue    = recent[recent.length - 1].value;
-  const totalDaysData  = Math.max(1, recent.length - 1);
-  const totalBurned    = newestValue - oldestValue;
-  const dailyBurnRate  = totalBurned / totalDaysData;
+   const oldestValue    = recent[0].value;
+   const newestValue    = recent[recent.length - 1].value;
+   const totalDaysData  = Math.max(1, recent.length - 1);
+   const totalBurned    = newestValue - oldestValue;
+   const dailyBurnRate  = totalBurned / totalDaysData;
 
-  console.log(`[calculateBurnRate] Month filter: ${monthStartStr} | Current month data: ${currentMonthHistory.length} points | Window: ${recent.length} points (${totalDaysData} days) | Burn rate: ${dailyBurnRate.toFixed(2)}/day`);
+   console.log(`[calculateBurnRate] Month filter: ${monthStartStr} | Current month data: ${currentMonthHistory.length} points | Window: ${recent.length} points (${totalDaysData} days) | Burn rate: ${dailyBurnRate.toFixed(2)}/day | Values: ${oldestValue} -> ${newestValue}`);
 
-  return {
-    dailyRate:   dailyBurnRate,
-    totalBurned,
-    daysOfData:  totalDaysData,
-    startDate:   recent[0].date,
-    endDate:     recent[recent.length - 1].date,
-    startValue:  oldestValue,
-    endValue:    newestValue,
-    isLimited:   false,
-  };
+   return {
+     dailyRate:   dailyBurnRate,
+     totalBurned,
+     daysOfData:  totalDaysData,
+     startDate:   recent[0].date,
+     endDate:     recent[recent.length - 1].date,
+     startValue:  oldestValue,
+     endValue:    newestValue,
+     isLimited:   false,
+   };
 };
 
 export const getDaysRemainingInMonth = () => {
