@@ -33,8 +33,12 @@ const ProjectionCard = ({
 
       if (cancelled) return;
 
-      setCopilotBurnRate(calculateBurnRate(copilotHistory, 7));
-      setActionsBurnRate(calculateBurnRate(actionsHistory, 7));
+      // Calculate burn rate for current billing month only
+      // GitHub billing resets on 1st of each month at 00:00 UTC
+      const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+      setCopilotBurnRate(calculateBurnRate(copilotHistory, 7, currentMonthStart));
+      setActionsBurnRate(calculateBurnRate(actionsHistory, 7, currentMonthStart));
     };
 
     fetchAndCompute().catch(err => console.error('[ProjectionCard] history fetch error:', err));
