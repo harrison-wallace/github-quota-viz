@@ -50,6 +50,8 @@ A self-hosted React application for visualizing GitHub Actions and Copilot Premi
 | Deployment | Docker multi-stage build (node:18-alpine builder → nginx:alpine production) |
 | CI/CD | Jenkins multibranch pipeline, manual tag-based deployments |
 
+**For detailed diagrams and component interactions, see [Architecture Documentation →](docs/ARCHITECTURE.md)**
+
 ### Container Layout
 
 Inside the container both nginx and the Express API server run together:
@@ -260,6 +262,8 @@ The dashboard refreshes usage data every hour. If the browser tab was hidden whe
 ### Usage Projection
 
 The projection card estimates end-of-month usage based on a 7-day rolling burn rate calculated from daily snapshots stored in SQLite. Because history is stored server-side with no cap, projections become more accurate over time and are consistent across all devices hitting the same server.
+
+**Important:** As of v2.1.0, burn rate calculations are **month-aware** and automatically filter out data from previous months. This ensures accurate projections after monthly quota resets on the 1st of each month at 00:00 UTC. [Learn more →](docs/USAGE_PROJECTION.md)
 
 ### Available Copilot Models
 
