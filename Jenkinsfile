@@ -123,7 +123,10 @@ pipeline {
         
         stage('Deploy Container') {
             when {
-                tag 'v*'
+                anyOf {
+                    branch 'main'
+                    tag 'v*'
+                }
             }
             steps {
                 echo 'Deploying Docker container...'
@@ -162,7 +165,10 @@ pipeline {
         
         stage('Verify Deployment') {
             when {
-                tag 'v*'
+                anyOf {
+                    branch 'main'
+                    tag 'v*'
+                }
             }
             steps {
                 echo 'Verifying container is running...'
@@ -186,8 +192,10 @@ pipeline {
                     echo "Container name: ${params.CONTAINER_NAME}"
                     echo "Data volume: ${params.CONTAINER_NAME}-data"
                 } else if (env.BRANCH_NAME == 'main') {
-                    echo "Build and tests successful on main branch!"
-                    echo "To deploy: create a version tag (e.g., git tag -a v1.0.0 -m 'Version 1.0.0')"
+                    echo "Deployment successful!"
+                    echo "Access the dashboard at: http://localhost:${params.PORT}"
+                    echo "Container name: ${params.CONTAINER_NAME}"
+                    echo "Data volume: ${params.CONTAINER_NAME}-data"
                 } else {
                     echo "Build and tests successful! (Branch: ${env.BRANCH_NAME})"
                 }
@@ -196,7 +204,7 @@ pipeline {
 
         failure {
             script {
-                if (env.TAG_NAME) {
+                if (env.TAG_NAME || env.BRANCH_NAME == 'main') {
                     echo 'Deployment failed!'
                     sh """
                         docker logs ${params.CONTAINER_NAME} 2>/dev/null || true
