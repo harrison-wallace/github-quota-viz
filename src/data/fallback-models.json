@@ -1,0 +1,153 @@
+{
+  "lastUpdated": "2026-04-03T00:00:00Z",
+  "source": "fallback",
+  "models": [
+    {
+      "name": "GPT-4.1",
+      "provider": "OpenAI",
+      "status": "GA",
+      "multiplierPaid": 0,
+      "multiplierFree": 1
+    },
+    {
+      "name": "GPT-5 mini",
+      "provider": "OpenAI",
+      "status": "GA",
+      "multiplierPaid": 0,
+      "multiplierFree": 1
+    },
+    {
+      "name": "GPT-5.1",
+      "provider": "OpenAI",
+      "status": "Closing down: 2026-04-15",
+      "multiplierPaid": 1,
+      "multiplierFree": null
+    },
+    {
+      "name": "GPT-5.2",
+      "provider": "OpenAI",
+      "status": "GA",
+      "multiplierPaid": 1,
+      "multiplierFree": null
+    },
+    {
+      "name": "GPT-5.2-Codex",
+      "provider": "OpenAI",
+      "status": "GA",
+      "multiplierPaid": 1,
+      "multiplierFree": null
+    },
+    {
+      "name": "GPT-5.3-Codex",
+      "provider": "OpenAI",
+      "status": "GA",
+      "multiplierPaid": 1,
+      "multiplierFree": null
+    },
+    {
+      "name": "GPT-5.4",
+      "provider": "OpenAI",
+      "status": "GA",
+      "multiplierPaid": null,
+      "multiplierFree": null
+    },
+    {
+      "name": "GPT-5.4 mini",
+      "provider": "OpenAI",
+      "status": "GA",
+      "multiplierPaid": null,
+      "multiplierFree": null
+    },
+    {
+      "name": "Claude Haiku 4.5",
+      "provider": "Anthropic",
+      "status": "GA",
+      "multiplierPaid": 0.33,
+      "multiplierFree": 1
+    },
+    {
+      "name": "Claude Opus 4.5",
+      "provider": "Anthropic",
+      "status": "GA",
+      "multiplierPaid": 3,
+      "multiplierFree": null
+    },
+    {
+      "name": "Claude Opus 4.6",
+      "provider": "Anthropic",
+      "status": "GA",
+      "multiplierPaid": 3,
+      "multiplierFree": null
+    },
+    {
+      "name": "Claude Opus 4.6 (fast mode) (preview)",
+      "provider": "Anthropic",
+      "status": "Public preview",
+      "multiplierPaid": 9,
+      "multiplierFree": null
+    },
+    {
+      "name": "Claude Sonnet 4",
+      "provider": "Anthropic",
+      "status": "GA",
+      "multiplierPaid": 1,
+      "multiplierFree": null
+    },
+    {
+      "name": "Claude Sonnet 4.5",
+      "provider": "Anthropic",
+      "status": "GA",
+      "multiplierPaid": 1,
+      "multiplierFree": null
+    },
+    {
+      "name": "Claude Sonnet 4.6",
+      "provider": "Anthropic",
+      "status": "GA",
+      "multiplierPaid": null,
+      "multiplierFree": null
+    },
+    {
+      "name": "Gemini 2.5 Pro",
+      "provider": "Google",
+      "status": "GA",
+      "multiplierPaid": 1,
+      "multiplierFree": null
+    },
+    {
+      "name": "Gemini 3 Flash",
+      "provider": "Google",
+      "status": "Public preview",
+      "multiplierPaid": 0.33,
+      "multiplierFree": null
+    },
+    {
+      "name": "Gemini 3.1 Pro",
+      "provider": "Google",
+      "status": "Public preview",
+      "multiplierPaid": null,
+      "multiplierFree": null
+    },
+    {
+      "name": "Grok Code Fast 1",
+      "provider": "xAI",
+      "status": "GA",
+      "multiplierPaid": 0.25,
+      "multiplierFree": null
+    },
+    {
+      "name": "Raptor mini",
+      "provider": "Fine-tuned GPT-5 mini",
+      "status": "Public preview",
+      "multiplierPaid": 0,
+      "multiplierFree": 1
+    },
+    {
+      "name": "Goldeneye",
+      "provider": "Fine-tuned GPT-5.1-Codex",
+      "status": "Public preview",
+      "multiplierPaid": null,
+      "multiplierFree": null
+    }
+  ]
+}

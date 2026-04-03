@@ -83,7 +83,11 @@ export const calculateBurnRate = (history, days = 7, monthStart = null) => {
 
    // Default: use the 1st of current month at 00:00 UTC
    const billingMonthStart = monthStart || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-   const monthStartStr = billingMonthStart.toISOString().split('T')[0];
+   // Build date string from local calendar fields to avoid toISOString() UTC shift
+   // (e.g. local midnight on Apr 1 converts to "2026-03-31T..." in UTC-5)
+   const _y = billingMonthStart.getFullYear();
+   const _m = String(billingMonthStart.getMonth() + 1).padStart(2, '0');
+   const monthStartStr = `${_y}-${_m}-01`;
 
    // Filter to current month only
    const currentMonthHistory = history.filter(entry => entry.date >= monthStartStr);
@@ -190,7 +194,16 @@ export const calculateBurnRate = (history, days = 7, monthStart = null) => {
    const oldestValue    = recent[0].value;
    const newestValue    = recent[recent.length - 1].value;
    const totalDaysData  = Math.max(1, recent.length - 1);
-   const totalBurned    = newestValue - oldestValue;
+   let totalBurned      = newestValue - oldestValue;
+
+   // Month boundary crossed within the window (newest < oldest means a reset occurred).
+   // Treat the current value as the total burned so far this month so the rate
+   // reflects actual new-month spend rather than going negative.
+   if (totalBurned < 0) {
+     console.log(`[calculateBurnRate] Month boundary reset detected in happy-path (${oldestValue} -> ${newestValue}). Using current value as month total.`);
+     totalBurned = newestValue;
+   }
+
    const dailyBurnRate  = totalBurned / totalDaysData;
 
    console.log(`[calculateBurnRate] Month filter: ${monthStartStr} | Current month data: ${currentMonthHistory.length} points | Window: ${recent.length} points (${totalDaysData} days) | Burn rate: ${dailyBurnRate.toFixed(2)}/day | Values: ${oldestValue} -> ${newestValue}`);
@@ -215,7 +228,9 @@ export const getDaysRemainingInMonth = () => {
 
 export const projectEndOfMonthUsage = (currentUsage, burnRate, quotaLimit = null) => {
   const daysRemaining           = getDaysRemainingInMonth();
-  const projectedAdditionalUsage = burnRate * daysRemaining;
+  // Clamp to 0 — a negative burn rate would produce nonsensical negative projections.
+  const safeBurnRate            = Math.max(0, burnRate);
+  const projectedAdditionalUsage = safeBurnRate * daysRemaining;
   const projectedTotal           = currentUsage + projectedAdditionalUsage;
 
   return {

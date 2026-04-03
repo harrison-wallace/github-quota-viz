@@ -34,8 +34,11 @@ const ProjectionCard = ({
       if (cancelled) return;
 
       // Calculate burn rate for current billing month only
-      // GitHub billing resets on 1st of each month at 00:00 UTC
-      const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      // GitHub billing resets on 1st of each month at 00:00 UTC.
+      // Use local calendar fields directly to avoid toISOString() UTC shift
+      // (local midnight on the 1st can convert to the last day of the prior month in UTC-N).
+      const _now = new Date();
+      const currentMonthStart = new Date(_now.getFullYear(), _now.getMonth(), 1);
 
       setCopilotBurnRate(calculateBurnRate(copilotHistory, 7, currentMonthStart));
       setActionsBurnRate(calculateBurnRate(actionsHistory, 7, currentMonthStart));

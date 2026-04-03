@@ -51,8 +51,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN mkdir -p /data
 VOLUME ["/data"]
 
-# Cron job: scrape models every 24 hours
-RUN echo "0 2 * * * cd /app && node scripts/scrape-models.js >> /var/log/cron.log 2>&1" > /etc/crontabs/root
+# Cron job: scrape models every 24 hours at 02:00 UTC
+# Use absolute path to node — dcron may not inherit a full PATH from the container environment.
+RUN printf 'PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin\n0 2 * * * cd /app && /usr/local/bin/node scripts/scrape-models.js >> /var/log/cron.log 2>&1\n' > /etc/crontabs/root
 
 # Log file for cron
 RUN touch /var/log/cron.log
